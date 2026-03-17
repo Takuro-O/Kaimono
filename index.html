@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ffffff">
+  <title>買い物リスト</title>
+  <style>
+    :root {
+      --c-bg:#ffffff;--c-surface:#f8f9fa;--c-border:#e8e8e8;
+      --c-text:#1a1a1a;--c-sub:#888888;--c-primary:#2563eb;
+      --c-primary-light:#eff6ff;--c-danger:#ef4444;--c-success:#22c55e;
+      --radius-s:10px;--radius-m:14px;--radius-l:22px;
+      --shadow-card:0 1px 4px rgba(0,0,0,0.07);
+      --shadow-modal:0 -4px 32px rgba(0,0,0,0.12);
+      --transition:0.18s ease;
+      /* iPhone 17 safe areas */
+      --sat: env(safe-area-inset-top);
+      --sab: env(safe-area-inset-bottom);
+      --sal: env(safe-area-inset-left);
+      --sar: env(safe-area-inset-right);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;}
+    body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
+      background:var(--c-bg);color:var(--c-text);font-size:16px;line-height:1.5;
+      -webkit-text-size-adjust:100%;overscroll-behavior:none;}
+    #app{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+    button{font-family:inherit;cursor:pointer;touch-action:manipulation;}
+    input,textarea,select{font-family:inherit;font-size:16px;}
+    /* タップ領域を最低44pxに（iOS HIG準拠） */
+    .tappable{transition:transform var(--transition),opacity var(--transition);
+      -webkit-tap-highlight-color:transparent;min-height:44px;display:inline-flex;
+      align-items:center;justify-content:center;}
+    button.tappable{min-height:44px;}
+    .tappable:active{transform:scale(0.97);opacity:0.85;}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+    /* ── Header ── */
+    header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.94);
+      backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+      border-bottom:1px solid var(--c-border);
+      padding:0 12px 0 16px;height:56px;
+      display:flex;align-items:center;justify-content:space-between;}
+    header h1{font-size:17px;font-weight:700;}
+    .sync-dot{width:7px;height:7px;border-radius:50%;background:#ddd;
+      transition:background 0.4s;flex-shrink:0;margin-right:7px;}
+    .sync-dot.green{background:var(--c-success);}
+    .sync-dot.red{background:var(--c-danger);}
+    .sync-dot.yellow{background:#f59e0b;animation:pulse 1s infinite;}
+
+    /* ── Bottom nav（home indicator対応） ── */
+    #bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;
+      background:rgba(255,255,255,0.96);backdrop-filter:blur(20px) saturate(180%);
+      -webkit-backdrop-filter:blur(20px) saturate(180%);
+      border-top:1px solid var(--c-border);
+      display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:100;}
+    .nav-btn{flex:1;height:54px;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:3px;background:none;border:none;
+      font-size:10px;font-weight:500;color:var(--c-sub);position:relative;
+      min-height:44px;}
+    .nav-btn .nav-icon{font-size:22px;position:relative;line-height:1;}
+    .nav-btn.active{color:var(--c-primary);}
+
+    main{flex:1;overflow-y:auto;padding:10px 0 calc(76px + env(safe-area-inset-bottom));
+      -webkit-overflow-scrolling:touch;}
+
+    /* ── Filter tabs ── */
+    .filter-bar{display:flex;gap:7px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none;}
+    .filter-bar::-webkit-scrollbar{display:none;}
+    .filter-chip{flex-shrink:0;height:32px;padding:0 14px;border-radius:16px;
+      border:1.5px solid var(--c-border);background:var(--c-bg);color:var(--c-sub);
+      font-size:13px;font-weight:600;min-height:44px;display:inline-flex;
+      align-items:center;justify-content:center;}
+    .filter-chip.active{background:var(--c-primary);border-color:var(--c-primary);color:#fff;}
+
+    /* ── Summary bar ── */
+    .summary-bar{margin:0 14px 10px;padding:11px 14px;background:var(--c-surface);
+      border-radius:var(--radius-m);display:flex;justify-content:space-between;align-items:center;}
+
+    /* ── Person group header ── */
+    .person-section{margin-bottom:2px;}
+    .person-header{display:flex;align-items:center;gap:8px;padding:10px 14px 5px;
+      cursor:pointer;user-select:none;min-height:44px;}
+    .person-icon{font-size:18px;}
+    .person-name{font-size:15px;font-weight:700;color:var(--c-text);flex:1;}
+    .person-header.collapsed .shop-toggle{transform:rotate(-90deg);}
+
+    /* ── Shop group header ── */
+    .shop-header{display:flex;align-items:center;gap:8px;padding:8px 14px 6px;
+      cursor:pointer;user-select:none;min-height:44px;}
+    .shop-icon{font-size:15px;}
+    .shop-name{font-size:13px;font-weight:700;color:var(--c-text);flex:1;}
+    .shop-count{font-size:11px;font-weight:600;color:var(--c-sub);
+      background:var(--c-surface);border-radius:9px;padding:1px 7px;}
+    .shop-price{font-size:12px;font-weight:600;color:var(--c-primary);}
+    .shop-toggle{font-size:10px;color:var(--c-sub);transition:transform var(--transition);margin-left:4px;}
+    .shop-header.collapsed .shop-toggle{transform:rotate(-90deg);}
+    .shop-section{margin-bottom:4px;}
+
+    /* ── Item row（タップ領域44px以上確保） ── */
+    .item-card{margin:0 14px 6px;background:var(--c-bg);border:1px solid var(--c-border);
+      border-radius:var(--radius-s);box-shadow:var(--shadow-card);overflow:hidden;position:relative;}
+    .item-card.done{opacity:0.5;}
+    .item-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:44px;}
+    .check-btn{width:26px;height:26px;border-radius:50%;flex-shrink:0;
+      border:1.5px solid var(--c-border);background:var(--c-bg);
+      display:flex;align-items:center;justify-content:center;
+      font-size:13px;transition:all var(--transition);
+      -webkit-tap-highlight-color:transparent;}
+    .check-btn:active{transform:scale(0.9);opacity:0.8;}
+    .check-btn.checked{background:var(--c-success);border-color:var(--c-success);color:#fff;}
+    .item-name{font-size:15px;font-weight:600;flex:1;line-height:1.3;}
+    .item-card.done .item-name{text-decoration:line-through;color:var(--c-sub);}
+    .item-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+    .item-qty{font-size:12px;color:var(--c-sub);}
+    .item-price-tag{font-size:12px;font-weight:600;color:var(--c-primary);
+      background:var(--c-primary-light);border-radius:6px;padding:2px 7px;}
+    .item-note-inline{font-size:12px;color:var(--c-sub);padding:0 10px 8px 46px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .cat-tag{font-size:12px;color:var(--c-sub);background:var(--c-surface);
+      border-radius:5px;padding:2px 6px;flex-shrink:0;}
+    .item-delete-bg{position:absolute;inset:0;background:var(--c-danger);border-radius:var(--radius-s);
+      display:flex;align-items:center;justify-content:flex-end;padding-right:16px;z-index:-1;}
+
+    #fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:20px;
+      width:56px;height:56px;border-radius:50%;background:var(--c-primary);color:#fff;border:none;
+      font-size:28px;box-shadow:0 4px 18px rgba(37,99,235,0.38);z-index:90;
+      display:flex;align-items:center;justify-content:center;}
+
+    /* ── Modal / Sheet ── */
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;}
+    .modal-overlay.open{display:flex;}
+    .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,0.45);animation:fadeIn 0.2s ease;}
+    .modal-sheet{position:relative;width:100%;max-width:430px;background:var(--c-bg);
+      border-radius:var(--radius-l) var(--radius-l) 0 0;
+      max-height:92dvh;overflow:hidden;display:flex;flex-direction:column;
+      box-shadow:var(--shadow-modal);animation:slideUp 0.28s cubic-bezier(.32,.72,0,1);}
+    .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;
+      padding:20px 16px 8px;flex:1;}
+    .modal-footer{padding:10px 16px;
+      padding-bottom:calc(14px + env(safe-area-inset-bottom));
+      border-top:1px solid var(--c-border);background:var(--c-bg);flex-shrink:0;}
+    .modal-handle{width:40px;height:4px;background:#d0d0d0;border-radius:2px;margin:0 auto 18px;}
+
+    /* ── Form ── */
+    .form-label{display:block;font-size:13px;font-weight:600;color:var(--c-sub);margin-bottom:6px;}
+    .form-input{width:100%;height:48px;padding:0 14px;border:1.5px solid var(--c-border);
+      border-radius:var(--radius-s);background:var(--c-bg);font-size:16px;color:var(--c-text);
+      transition:border-color var(--transition);outline:none;
+      -webkit-appearance:none;appearance:none;}
+    .form-input:focus{border-color:var(--c-primary);}
+    .form-mb{margin-bottom:16px;}
+
+    /* ── Segmented control ── */
+    .seg-ctrl{display:flex;border:1.5px solid var(--c-border);border-radius:var(--radius-s);overflow:hidden;}
+    .seg-btn{flex:1;height:44px;background:var(--c-bg);border:none;font-size:13px;font-weight:600;
+      color:var(--c-sub);border-right:1px solid var(--c-border);transition:all var(--transition);}
+    .seg-btn:last-child{border-right:none;}
+    .seg-btn.active{background:var(--c-primary);color:#fff;}
+
+    /* ── Stepper ── */
+    .stepper{display:inline-flex;align-items:center;border:1.5px solid var(--c-border);
+      border-radius:var(--radius-s);overflow:hidden;}
+    .stepper-btn{width:44px;height:44px;background:var(--c-surface);border:none;font-size:20px;color:var(--c-text);}
+    .stepper-val{min-width:48px;text-align:center;font-size:15px;font-weight:600;padding:0 6px;}
+    .unit-row{display:flex;gap:6px;flex-wrap:wrap;}
+    .unit-btn{height:36px;padding:0 13px;border-radius:18px;border:1.5px solid var(--c-border);
+      background:var(--c-bg);font-size:13px;color:var(--c-sub);}
+    .unit-btn.active{border-color:var(--c-primary);background:var(--c-primary-light);
+      color:var(--c-primary);font-weight:600;}
+
+    /* ── Cat sheet ── */
+    #cat-sheet{display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;}
+    #cat-sheet.open{display:flex;}
+    .cat-option{width:100%;min-height:52px;padding:12px 16px;background:none;border:none;
+      border-top:1px solid var(--c-border);font-size:16px;text-align:left;
+      display:flex;align-items:center;justify-content:space-between;color:var(--c-text);}
+
+    /* ── Buttons ── */
+    .btn-primary{width:100%;height:50px;background:var(--c-primary);color:#fff;border:none;
+      border-radius:var(--radius-s);font-size:16px;font-weight:700;}
+    .btn-danger{width:100%;height:48px;background:transparent;color:var(--c-danger);
+      border:1.5px solid var(--c-danger);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
+    .btn-outline{width:100%;height:48px;background:transparent;color:var(--c-primary);
+      border:1.5px solid var(--c-primary);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
+    .btn-ghost{width:100%;height:48px;background:transparent;color:var(--c-sub);
+      border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
+
+    /* ── Confirm ── */
+    #confirm-overlay{display:none;position:fixed;inset:0;z-index:600;
+      align-items:center;justify-content:center;padding:24px;
+      background:rgba(0,0,0,0.5);animation:fadeIn 0.15s ease;}
+    #confirm-overlay.open{display:flex;}
+    .confirm-box{width:100%;max-width:300px;background:var(--c-bg);border-radius:var(--radius-l);
+      padding:24px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.20);}
+    .confirm-title{font-size:17px;font-weight:700;margin-bottom:8px;}
+    .confirm-msg{font-size:14px;color:var(--c-sub);margin-bottom:20px;line-height:1.6;white-space:pre-wrap;}
+    .confirm-btns{display:flex;gap:10px;}
+    .confirm-cancel{flex:1;height:46px;background:var(--c-surface);border:none;
+      border-radius:var(--radius-s);font-size:15px;font-weight:600;color:var(--c-sub);}
+    .confirm-ok{flex:1;height:46px;background:var(--c-danger);border:none;
+      border-radius:var(--radius-s);font-size:15px;font-weight:600;color:#fff;}
+    .confirm-ok.primary{background:var(--c-primary);}
+
+    /* ── Toast ── */
+    #toast{position:fixed;bottom:calc(82px + env(safe-area-inset-bottom));left:50%;
+      transform:translateX(-50%);background:rgba(26,26,26,0.88);color:#fff;
+      padding:10px 20px;border-radius:22px;font-size:14px;font-weight:600;
+      z-index:999;pointer-events:none;white-space:nowrap;}
+
+    /* ── Badge ── */
+    .badge{display:none;position:absolute;top:-4px;right:-6px;min-width:18px;height:18px;
+      background:var(--c-danger);color:#fff;border-radius:9px;font-size:10px;font-weight:700;
+      padding:0 3px;line-height:18px;text-align:center;border:2px solid var(--c-bg);}
+
+    /* ── Frequent ── */
+    .freq-card{margin:0 14px 8px;padding:13px 14px;background:var(--c-bg);
+      border:1px solid var(--c-border);border-radius:var(--radius-m);box-shadow:var(--shadow-card);
+      display:flex;align-items:center;gap:10px;}
+    .freq-info{flex:1;min-width:0;}
+    .freq-add-btn{width:36px;height:36px;border-radius:50%;background:var(--c-primary-light);
+      border:none;color:var(--c-primary);font-size:22px;display:flex;
+      align-items:center;justify-content:center;flex-shrink:0;}
+
+    /* ── Setup ── */
+    #setup-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--c-bg);
+      overflow-y:auto;padding:0 0 32px;}
+    #setup-overlay.open{display:block;}
+    .setup-scroll{max-width:400px;margin:0 auto;padding:36px 20px;}
+    .step-badge{display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:50%;background:var(--c-primary);
+      color:#fff;font-size:12px;font-weight:700;flex-shrink:0;}
+    .step-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
+    .step-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+    .step-desc{font-size:12px;color:var(--c-sub);line-height:1.6;}
+    .divider{display:flex;align-items:center;gap:10px;margin:18px 0;}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--c-border);}
+    .divider span{color:var(--c-sub);font-size:12px;}
+
+    /* ── Sync modal ── */
+    .code-box{background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:14px;}
+    .code-text{font-size:12px;font-weight:600;color:var(--c-primary);word-break:break-all;line-height:1.5;}
+    .code-hint{font-size:11px;color:var(--c-sub);margin-top:5px;}
+
+    .page{display:none;}
+    .page.active{display:block;}
+    .empty-state{text-align:center;padding:56px 24px;color:var(--c-sub);}
+    .empty-icon{font-size:48px;margin-bottom:14px;}
+    .empty-title{font-size:15px;font-weight:600;color:var(--c-text);margin-bottom:6px;}
+    .empty-desc{font-size:13px;line-height:1.6;}
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div style="display:flex;align-items:center;">
+      <span class="sync-dot" id="sync-dot"></span>
+      <h1 id="page-title">🛒 買い物リスト</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:2px;">
+      <button id="header-clear" class="tappable"
+        style="background:none;border:none;font-size:12px;color:var(--c-primary);font-weight:600;padding:4px 8px;"
+        onclick="clearDone()">購入済みクリア</button>
+      <button class="tappable" onclick="openSyncModal()"
+        style="background:none;border:none;font-size:19px;padding:4px 4px 4px 2px;">🔗</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="page-list" class="page active">
+      <div class="filter-bar" id="filter-bar"></div>
+      <div class="summary-bar" id="summary-bar"></div>
+      <div id="list-content"></div>
+    </div>
+    <div id="page-freq" class="page">
+      <div style="padding:10px 14px 4px;">
+        <p style="font-size:12px;color:var(--c-sub);">よく買うものをワンタップでリストに追加できます</p>
+      </div>
+      <div id="freq-content"></div>
+    </div>
+  </main>
+
+  <nav id="bottom-nav">
+    <button class="nav-btn tappable active" data-page="list" onclick="showPage('list')">
+      <span class="nav-icon">🛒<span class="badge" id="badge-list"></span></span>
+      <span>リスト</span>
+    </button>
+    <button class="nav-btn tappable" data-page="freq" onclick="showPage('freq')">
+      <span class="nav-icon">⭐</span>
+      <span>よく買うもの</span>
+    </button>
+  </nav>
+</div>
+
+<button id="fab" class="tappable" onclick="openAddModal();haptic()">＋</button>
+
+<!-- ── SETUP ── -->
+<div id="setup-overlay">
+<div class="setup-scroll">
+  <div style="text-align:center;margin-bottom:28px;">
+    <div style="font-size:52px;margin-bottom:10px;">🛒</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">買い物リスト</div>
+    <div style="font-size:13px;color:var(--c-sub);line-height:1.7;">
+      家族とリアルタイムで共有できます<br>バックエンドに <strong>JSONBin.io</strong>（無料）を使います
+    </div>
+  </div>
+  <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:18px;margin-bottom:14px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">🆕 新しい部屋を作る</div>
+    <div class="step-row">
+      <span class="step-badge">1</span>
+      <div><div class="step-title">JSONBin.io に無料登録</div>
+        <div class="step-desc">Google/GitHubでサインアップできます</div>
+        <a href="https://jsonbin.io" target="_blank" rel="noopener"
+          style="display:inline-block;margin-top:6px;padding:6px 14px;background:var(--c-primary);
+          color:#fff;border-radius:var(--radius-s);font-size:13px;font-weight:600;text-decoration:none;">
+          jsonbin.io を開く →</a>
+      </div>
+    </div>
+    <div class="step-row">
+      <span class="step-badge">2</span>
+      <div><div class="step-title">Master Key をコピー</div>
+        <div class="step-desc">右上メニュー → API Keys → Master Key</div>
+      </div>
+    </div>
+    <div class="step-row" style="margin-bottom:10px;">
+      <span class="step-badge">3</span>
+      <div style="flex:1;"><div class="step-title">ここに貼り付けて作成</div></div>
+    </div>
+    <div class="form-mb" style="margin-left:32px;">
+      <input class="form-input" id="master-key-input" type="password"
+        placeholder="$2a$10$xxxx…" autocomplete="off" style="font-size:14px;">
+    </div>
+    <button class="btn-primary tappable" id="create-btn" onclick="createRoom()"
+      style="margin-left:32px;width:calc(100% - 32px);height:46px;font-size:15px;">部屋を作る</button>
+    <p id="create-error" style="color:var(--c-danger);font-size:12px;margin-top:8px;margin-left:32px;display:none;"></p>
+  </div>
+  <div class="divider"><span>または招待を受けた場合</span></div>
+  <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:18px;">
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px;">📩 招待コードで参加</div>
+    <div style="font-size:12px;color:var(--c-sub);margin-bottom:10px;">送られてきた招待コードを貼り付けてください</div>
+    <div class="form-mb">
+      <textarea id="invite-code-input" style="width:100%;min-height:72px;padding:10px 12px;
+        border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:13px;
+        color:var(--c-text);resize:none;outline:none;line-height:1.5;background:var(--c-bg);"
+        placeholder="招待コードをここに貼り付け…"></textarea>
+    </div>
+    <button class="btn-outline tappable" onclick="joinRoom(this)">参加する</button>
+    <p id="join-error" style="color:var(--c-danger);font-size:12px;margin-top:8px;display:none;"></p>
+  </div>
+</div>
+</div>
+
+<!-- ── ADD/EDIT MODAL ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-bd" onclick="closeModal()"></div>
+  <div class="modal-sheet">
+    <div style="padding:16px 16px 0;flex-shrink:0;">
+      <div class="modal-handle"></div>
+      <h2 id="modal-title" style="font-size:16px;font-weight:700;margin-bottom:14px;">商品を追加</h2>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-mb">
+        <label class="form-label">商品名 *</label>
+        <input class="form-input" id="inp-name" type="text" placeholder="例: 牛乳、トマト…" maxlength="50"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('cat-select-btn').focus();openCatSheet();}">
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">買う人</label>
+        <div class="seg-ctrl" id="person-seg"></div>
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">買う場所</label>
+        <div class="seg-ctrl" id="shop-seg"></div>
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">カテゴリ</label>
+        <button class="tappable form-input" id="cat-select-btn" onclick="openCatSheet()"
+          style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+          <span id="cat-select-label" style="color:var(--c-sub);">選択してください</span>
+          <span style="color:var(--c-sub);">›</span>
+        </button>
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">数量</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="stepper">
+            <button class="stepper-btn tappable" onclick="changeQty(-1)">−</button>
+            <span class="stepper-val" id="qty-val">1</span>
+            <button class="stepper-btn tappable" onclick="changeQty(1)">＋</button>
+          </div>
+          <div class="unit-row" id="unit-row"></div>
+        </div>
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">金額（任意）</label>
+        <input class="form-input" id="inp-price" type="number" placeholder="例: 198" min="0" max="99999">
+      </div>
+
+      <div class="form-mb">
+        <label class="form-label">メモ（任意）</label>
+        <input class="form-input" id="inp-note" type="text" placeholder="例: Sサイズ" maxlength="80">
+      </div>
+
+      <div class="form-mb" style="margin-bottom:4px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="inp-frequent" style="width:18px;height:18px;accent-color:var(--c-primary);">
+          <span style="font-size:14px;">⭐ よく買うものに登録</span>
+        </label>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary tappable" id="modal-submit" onclick="submitItem()" style="margin-bottom:8px;">追加する</button>
+      <button id="modal-delete" class="btn-danger tappable" onclick="deleteCurrentItem()" style="display:none;">削除する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CATEGORY SHEET ── -->
+<div id="cat-sheet">
+  <div class="modal-bd" onclick="closeCatSheet()"></div>
+  <div class="modal-sheet">
+    <div style="padding:16px 16px 0;flex-shrink:0;">
+      <div class="modal-handle"></div>
+      <p style="font-size:13px;font-weight:600;color:var(--c-sub);margin-bottom:6px;">カテゴリを選択</p>
+    </div>
+    <div class="modal-body" style="padding-top:0;">
+      <div id="cat-options"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SYNC MODAL ── -->
+<div class="modal-overlay" id="sync-modal">
+  <div class="modal-bd" onclick="closeSyncModal()"></div>
+  <div class="modal-sheet">
+    <div style="padding:16px 16px 0;flex-shrink:0;">
+      <div class="modal-handle"></div>
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">🔗 共有設定</h2>
+      <p style="font-size:12px;color:var(--c-sub);margin-bottom:14px;">下の招待コードをLINEで家族に送ってください</p>
+    </div>
+    <div class="modal-body" style="padding-top:0;">
+      <div class="code-box" id="invite-code-box">
+        <div class="code-text" id="sync-code-display">-</div>
+        <div class="code-hint">招待コード（このテキスト全体を送ってください）</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="btn-outline tappable" onclick="copyInviteCode()" style="flex:1;height:44px;font-size:13px;">📋 コピー</button>
+        <button class="btn-outline tappable" onclick="shareInviteCode()" style="flex:1;height:44px;font-size:13px;">📤 送る</button>
+      </div>
+      <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:14px;">
+        <p style="font-size:12px;font-weight:600;color:var(--c-sub);margin-bottom:6px;">同期ステータス</p>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="sync-dot" id="sync-dot-modal"></span>
+          <span id="sync-status-text" style="font-size:13px;">確認中…</span>
+        </div>
+        <p id="sync-last-time" style="font-size:11px;color:var(--c-sub);margin-top:4px;"></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost tappable" onclick="confirmLeaveRoom()" style="margin-bottom:8px;">別の部屋に切り替える</button>
+      <button class="btn-ghost tappable" onclick="resetAllData()" style="color:var(--c-danger);border-color:var(--c-danger);">🗑 リストを全件削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM (z-index:600, 独立) ── -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <p class="confirm-title" id="confirm-title"></p>
+    <p class="confirm-msg"   id="confirm-msg"></p>
+    <div class="confirm-btns">
+      <button class="confirm-cancel tappable" id="confirm-cancel-btn">キャンセル</button>
+      <button class="confirm-ok tappable"     id="confirm-ok-btn">削除</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;"></div>
+
+<script>
+// ══════════════════════════════════════
+// Constants
+// ══════════════════════════════════════
+const LOCAL_KEY = 'shoplist-v6-local';
+const ROOM_KEY  = 'shoplist-v6-room';
+const SYNC_MS   = 15000;
+const API       = 'https://api.jsonbin.io/v3/b';
+
+const SHOPS = [
+  {id:'super',  label:'スーパー', icon:'🏪'},
+  {id:'amazon', label:'Amazon',   icon:'📦'},
+  {id:'other',  label:'その他',   icon:'🛒'},
+];
+const SHOP_MAP = Object.fromEntries(SHOPS.map(s=>[s.id,s]));
+
+const PERSONS = [
+  {id:'both',   label:'両方',     icon:'👫'},
+  {id:'takuro', label:'たくろう', icon:'👨'},
+  {id:'yuka',   label:'ゆか',     icon:'👩'},
+];
+const PERSON_MAP = Object.fromEntries(PERSONS.map(p=>[p.id,p]));
+
+const CATEGORIES = [
+  {id:'vegfruit',label:'野菜・果物',icon:'🥦'},
+  {id:'meat',    label:'肉・魚',    icon:'🥩'},
+  {id:'dairy',   label:'乳製品・卵',icon:'🥛'},
+  {id:'bread',   label:'パン・穀物',icon:'🍞'},
+  {id:'frozen',  label:'冷凍・加工',icon:'🥫'},
+  {id:'drink',   label:'飲料',      icon:'🍺'},
+  {id:'daily',   label:'日用品',    icon:'🧴'},
+  {id:'other',   label:'その他',    icon:'🛒'},
+];
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+const UNITS   = ['個','本','袋','缶','枚','パック','g','ml','L'];
+const FILTERS = [{id:'all',label:'すべて'},{id:'todo',label:'未購入'},{id:'done',label:'購入済み'}];
+
+// ══════════════════════════════════════
+// State
+// ══════════════════════════════════════
+let local, room={binId:null,apiKey:null}, syncItems=[], syncTemplates=[], syncOk=false, lastSyncAt=null;
+let syncTimer=null, pushTimer=null;
+
+try{ local=JSON.parse(localStorage.getItem(LOCAL_KEY))||{filter:'todo',collapsedShops:[]}; }
+catch(e){ local={filter:'todo',collapsedShops:[]}; }
+try{ const r=localStorage.getItem(ROOM_KEY); if(r) room=JSON.parse(r); }
+catch(e){}
+
+const saveLocal = ()=>{ try{localStorage.setItem(LOCAL_KEY,JSON.stringify(local));}catch(e){} };
+const saveRoom  = ()=>{ try{localStorage.setItem(ROOM_KEY,JSON.stringify(room));}catch(e){} };
+
+// ══════════════════════════════════════
+// Utils
+// ══════════════════════════════════════
+const haptic=(t='light')=>navigator.vibrate?.(t==='heavy'?30:10);
+const escHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+let _toastT;
+function showToast(msg,dur=2200){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';t.style.animation='fadeIn 0.2s ease';
+  clearTimeout(_toastT);
+  _toastT=setTimeout(()=>{t.style.animation='fadeOut 0.3s ease';
+    setTimeout(()=>t.style.display='none',300);},dur);
+}
+
+// ── Confirm: DOM-event based (Promiseではなくコールバック方式でz-index競合を回避) ──
+let _confirmOkCb=null, _confirmCancelCb=null;
+
+function showConfirm(title, msg, okLabel='削除', okClass=''){
+  document.getElementById('confirm-title').textContent=title;
+  document.getElementById('confirm-msg').textContent=msg;
+  const okBtn=document.getElementById('confirm-ok-btn');
+  const cancelBtn=document.getElementById('confirm-cancel-btn');
+  okBtn.textContent=okLabel;
+  okBtn.className='confirm-ok tappable'+(okClass?' '+okClass:'');
+  document.getElementById('confirm-overlay').classList.add('open');
+  return new Promise(resolve=>{
+    _confirmOkCb=()=>{ closeConfirmDialog(); resolve(true); };
+    _confirmCancelCb=()=>{ closeConfirmDialog(); resolve(false); };
+    okBtn.onclick=_confirmOkCb;
+    cancelBtn.onclick=_confirmCancelCb;
+  });
+}
+function closeConfirmDialog(){
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+
+// ══════════════════════════════════════
+// JSONBin API
+// ══════════════════════════════════════
+async function binCreate(apiKey,data){
+  const r=await fetch(API,{method:'POST',
+    headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'shopping-list','X-Bin-Private':'false'},
+    body:JSON.stringify({items:data,templates:[]})});
+  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`${r.status}: ${t}`);}
+  const j=await r.json();
+  return j.metadata?.id||j.id;
+}
+async function binGet(apiKey,binId){
+  const r=await fetch(`${API}/${binId}/latest`,{headers:{'X-Master-Key':apiKey}});
+  if(!r.ok) throw new Error(`GET ${r.status}`);
+  const j=await r.json();
+  const rec=j.record||j;
+  return {items:rec.items||[], templates:rec.templates||[]};
+}
+async function binPut(apiKey,binId,items,templates){
+  const r=await fetch(`${API}/${binId}`,{method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':apiKey},
+    body:JSON.stringify({items,templates})});
+  if(!r.ok) throw new Error(`PUT ${r.status}`);
+}
+
+function encodeInvite(apiKey,binId){
+  return btoa(encodeURIComponent(JSON.stringify({k:apiKey,b:binId})));
+}
+function decodeInvite(code){
+  try{const s=decodeURIComponent(atob(code.trim()));const o=JSON.parse(s);if(o.k&&o.b)return o;}catch(e){}
+  return null;
+}
+
+// ══════════════════════════════════════
+// Sync
+// ══════════════════════════════════════
+function setDot(color){
+  ['sync-dot','sync-dot-modal'].forEach(id=>{
+    const d=document.getElementById(id);
+    if(d)d.className='sync-dot'+(color?' '+color:'');
+  });
+}
+function mergeItems(a,b){
+  const map=new Map();
+  b.forEach(i=>map.set(i.id,i));
+  a.forEach(i=>{
+    const ex=map.get(i.id);
+    if(!ex){map.set(i.id,i);return;}
+    // 削除済みは必ず優先（タイムスタンプに関わらず削除を採用）
+    if(i.deleted&&!ex.deleted){map.set(i.id,i);return;}
+    if(!i.deleted&&ex.deleted){return;} // 相手が削除済み→そちらを採用(何もしない)
+    // 両方とも同じ状態なら新しい方を採用
+    if((i.updatedAt||0)>=(ex.updatedAt||0)){map.set(i.id,i);}
+  });
+  const cut=Date.now()-4*60*60*1000;
+  return [...map.values()].filter(i=>!(i.deleted&&(i.updatedAt||0)<cut));
+}
+// テンプレートはsoft-deleteなし、名前ベースで上書き
+function mergeTemplates(a,b){
+  const map=new Map();
+  b.forEach(i=>map.set(i.id,i));
+  a.forEach(i=>{const ex=map.get(i.id);if(!ex||(i.updatedAt||0)>=(ex.updatedAt||0))map.set(i.id,i);});
+  return [...map.values()];
+}
+async function syncPull(){
+  if(!room.binId||!room.apiKey)return;
+  setDot('yellow');
+  try{
+    const remote=await binGet(room.apiKey,room.binId);
+    const remoteItems=remote.items;
+    const remoteTemplates=remote.templates;
+
+    const mergedItems=mergeItems(syncItems,remoteItems);
+    const mergedTemplates=mergeTemplates(syncTemplates,remoteTemplates);
+
+    const hasRemoteItemChanges=mergedItems.length!==syncItems.length||remoteItems.some(r=>{
+      const cur=syncItems.find(x=>x.id===r.id);
+      return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
+    });
+    const hasRemoteTemplateChanges=mergedTemplates.length!==syncTemplates.length||remoteTemplates.some(r=>{
+      const cur=syncTemplates.find(x=>x.id===r.id);
+      return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
+    });
+
+    const rimapItems=new Map(remoteItems.map(i=>[i.id,i]));
+    const rimapTmpl=new Map(remoteTemplates.map(i=>[i.id,i]));
+    const needPush=
+      syncItems.some(i=>{const r=rimapItems.get(i.id);return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedItems.length!==remoteItems.length||
+      syncTemplates.some(i=>{const r=rimapTmpl.get(i.id);return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedTemplates.length!==remoteTemplates.length;
+
+    syncItems=mergedItems;
+    syncTemplates=mergedTemplates;
+    syncOk=true;lastSyncAt=new Date();setDot('green');
+    if(hasRemoteItemChanges||hasRemoteTemplateChanges)render();
+    if(needPush)await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
+  }catch(e){syncOk=false;setDot('red');}
+}
+function schedulePush(){
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(async()=>{
+    if(!room.binId||!room.apiKey)return;
+    try{await binPut(room.apiKey,room.binId,syncItems,syncTemplates);syncOk=true;lastSyncAt=new Date();setDot('green');}
+    catch(e){syncOk=false;setDot('red');}
+  },700);
+}
+function startSync(){clearInterval(syncTimer);syncTimer=setInterval(syncPull,SYNC_MS);syncPull();}
+
+// 旧データ移行：syncItemsにfrequent:trueがあればsyncTemplatesに移す
+function migrateFrequentItems(){
+  const freqItems=syncItems.filter(i=>!i.deleted&&i.frequent);
+  if(!freqItems.length)return false;
+  let changed=false;
+  freqItems.forEach(item=>{
+    const already=syncTemplates.some(t=>t.name===item.name);
+    if(!already){
+      const {done,deleted,createdAt,...rest}=item;
+      syncTemplates.push({id:'tmpl-migrated-'+item.id,...rest,updatedAt:Date.now()});
+      changed=true;
+    }
+    // syncItemsからfrequentフラグを除去
+    syncItems=syncItems.map(i=>i.id===item.id?{...i,frequent:undefined}:i);
+  });
+  return changed;
+}
+
+// ══════════════════════════════════════
+// Setup
+// ══════════════════════════════════════
+function showSetupError(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display=msg?'block':'none';}
+function closeSetup(){document.getElementById('setup-overlay').classList.remove('open');document.body.style.overflow='';}
+
+async function createRoom(){
+  const key=document.getElementById('master-key-input').value.trim();
+  if(!key){showSetupError('create-error','APIキーを入力してください');return;}
+  const btn=document.getElementById('create-btn');
+  btn.disabled=true;btn.textContent='作成中…';showSetupError('create-error','');
+  try{
+    const binId=await binCreate(key,[]);
+    room={binId,apiKey:key};saveRoom();closeSetup();startSync();
+    showToast('✅ 部屋を作りました！招待コードを家族に送ってください');
+  }catch(e){
+    showSetupError('create-error','作成に失敗しました。APIキーを確認してください。\n（'+e.message+'）');
+    btn.disabled=false;btn.textContent='部屋を作る';
+  }
+}
+async function joinRoom(btn){
+  const raw=document.getElementById('invite-code-input').value.trim();
+  if(!raw){showSetupError('join-error','招待コードを入力してください');return;}
+  const obj=decodeInvite(raw);
+  if(!obj){showSetupError('join-error','招待コードが正しくありません');return;}
+  showSetupError('join-error','');
+  btn.disabled=true;btn.textContent='接続中…';
+  try{
+    const data=await binGet(obj.k,obj.b);
+    room={binId:obj.b,apiKey:obj.k};saveRoom();
+    syncItems=data.items; syncTemplates=data.templates;
+    closeSetup();startSync();showToast('✅ 部屋に参加しました');render();
+  }catch(e){
+    showSetupError('join-error','接続に失敗しました。\n（'+e.message+'）');
+    btn.disabled=false;btn.textContent='参加する';
+  }
+}
+async function confirmLeaveRoom(){
+  const ok=await showConfirm('部屋を切り替える','現在の部屋から離れます。\nデータはサーバーに残ります。','切り替える','primary');
+  if(!ok)return;
+  clearInterval(syncTimer);room={binId:null,apiKey:null};saveRoom();syncItems=[];syncTemplates=[];
+  closeSyncModal();render();
+  document.getElementById('setup-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+async function resetAllData(){
+  const ok=await showConfirm('リストを全件削除','リストと「よく買うもの」をすべて削除します。\nこの操作は元に戻せません。','全削除');
+  if(!ok)return;
+  syncItems=[];syncTemplates=[];
+  closeSyncModal();
+  if(room.binId&&room.apiKey){
+    try{
+      await binPut(room.apiKey,room.binId,[],[]);
+      syncOk=true;lastSyncAt=new Date();setDot('green');
+    }catch(e){syncOk=false;setDot('red');}
+  }
+  haptic('heavy');render();showToast('🗑️ すべて削除しました');
+}
+
+// ══════════════════════════════════════
+// Sync modal
+// ══════════════════════════════════════
+function openSyncModal(){
+  const code=room.binId&&room.apiKey?encodeInvite(room.apiKey,room.binId):'（未設定）';
+  document.getElementById('sync-code-display').textContent=code;
+  document.getElementById('sync-status-text').textContent=syncOk?'🟢 同期中':'🔴 オフライン';
+  const t=lastSyncAt;
+  document.getElementById('sync-last-time').textContent=
+    t?`最終同期: ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`:'';
+  document.getElementById('sync-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeSyncModal(){document.getElementById('sync-modal').classList.remove('open');document.body.style.overflow='';}
+function copyInviteCode(){
+  navigator.clipboard?.writeText(document.getElementById('sync-code-display').textContent)
+    .then(()=>showToast('📋 招待コードをコピーしました')).catch(()=>{});haptic();
+}
+function shareInviteCode(){
+  const code=document.getElementById('sync-code-display').textContent;
+  const msg=`買い物リストの招待コードです 🛒\n\nアプリを開いて「招待コードで参加」に貼り付けてください👇\n${code}`;
+  if(navigator.share)navigator.share({text:msg}).catch(()=>{});
+  else navigator.clipboard?.writeText(msg).then(()=>showToast('📋 クリップボードにコピーしました'));
+  haptic();
+}
+
+// ══════════════════════════════════════
+// Add/Edit modal
+// ══════════════════════════════════════
+let editId=null, currentCat=null, currentShop='super', currentPerson=null, currentQty=1, currentUnit='個';
+
+function openAddModal(){
+  editId=null;currentCat=null;currentShop='super';currentPerson='both';currentQty=1;currentUnit='個';
+  document.getElementById('modal-title').textContent='商品を追加';
+  ['inp-name','inp-price','inp-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inp-frequent').checked=false;
+  document.getElementById('cat-select-label').textContent='選択してください';
+  document.getElementById('cat-select-label').style.color='var(--c-sub)';
+  document.getElementById('modal-delete').style.display='none';
+  document.getElementById('modal-submit').textContent='追加する';
+  renderPersonSeg();renderShopSeg();renderQty();renderUnits();
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>document.getElementById('inp-name').focus(),300);
+}
+function openEditModal(id){
+  const item=syncItems.find(i=>i.id===id);if(!item)return;
+  editId=id;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;currentQty=item.qty;currentUnit=item.unit||'個';
+  document.getElementById('modal-title').textContent='商品を編集';
+  document.getElementById('inp-name').value=item.name;
+  document.getElementById('inp-price').value=item.price||'';
+  document.getElementById('inp-note').value=item.note||'';
+  document.getElementById('inp-frequent').checked=syncTemplates.some(t=>t.name===item.name);
+  const c=CAT_MAP[currentCat];
+  document.getElementById('cat-select-label').textContent=c?`${c.icon} ${c.label}`:'選択してください';
+  document.getElementById('cat-select-label').style.color=c?'var(--c-text)':'var(--c-sub)';
+  document.getElementById('modal-delete').style.display='block';
+  document.getElementById('modal-submit').textContent='保存する';
+  renderPersonSeg();renderShopSeg();renderQty();renderUnits();
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
+
+// ── ボトムシート下スワイプで閉じる ──
+function enableSheetSwipeClose(sheetEl, closeFn){
+  let sy=0, dy=0, active=false;
+  const bodyEl=sheetEl.querySelector('.modal-body');
+
+  sheetEl.addEventListener('touchstart',e=>{
+    sy=e.touches[0].clientY; dy=0; active=false;
+    // modal-bodyの中でscrollTopが0のときのみ有効化
+    if(!bodyEl||bodyEl.scrollTop===0) active=true;
+  },{passive:true});
+
+  sheetEl.addEventListener('touchmove',e=>{
+    if(!active) return;
+    // modal-body内でscrollTopが上がったら無効化
+    if(bodyEl&&bodyEl.scrollTop>0){ active=false; sheetEl.style.transform=''; return; }
+    dy=e.touches[0].clientY-sy;
+    if(dy>0) sheetEl.style.transform=`translateY(${Math.min(dy,200)}px)`;
+  },{passive:true});
+
+  sheetEl.addEventListener('touchend',()=>{
+    if(!active){ dy=0; return; }
+    if(dy>220){
+      sheetEl.style.transition='transform 0.22s ease';
+      sheetEl.style.transform='translateY(100%)';
+      setTimeout(()=>{ sheetEl.style.transition=''; sheetEl.style.transform=''; closeFn(); },220);
+    }else{
+      sheetEl.style.transition='transform 0.2s ease';
+      sheetEl.style.transform='';
+      setTimeout(()=>sheetEl.style.transition='',200);
+    }
+    dy=0; active=false;
+  });
+}
+
+function renderPersonSeg(){
+  const opts=[...PERSONS];
+  document.getElementById('person-seg').innerHTML=opts.map(p=>
+    `<button class="seg-btn tappable ${p.id===currentPerson?'active':''}"
+      onclick="selectPerson(${p.id===null?'null':`'${p.id}'`});haptic()">
+      ${p.icon} ${p.label}</button>`).join('');
+}
+function selectPerson(id){currentPerson=id;renderPersonSeg();}
+function renderShopSeg(){
+  document.getElementById('shop-seg').innerHTML=SHOPS.map(s=>
+    `<button class="seg-btn tappable ${s.id===currentShop?'active':''}" onclick="selectShop('${s.id}');haptic()">
+      ${s.icon} ${s.label}</button>`).join('');
+}
+function selectShop(id){currentShop=id;renderShopSeg();}
+function renderQty(){document.getElementById('qty-val').textContent=currentQty;}
+function changeQty(d){currentQty=Math.min(99,Math.max(1,currentQty+d));renderQty();haptic();}
+function renderUnits(){
+  document.getElementById('unit-row').innerHTML=UNITS.map(u=>
+    `<button class="unit-btn tappable ${u===currentUnit?'active':''}" onclick="selectUnit('${u}');haptic()">${u}</button>`).join('');
+}
+function selectUnit(u){currentUnit=u;renderUnits();}
+
+function openCatSheet(){
+  document.getElementById('cat-options').innerHTML=CATEGORIES.map(c=>
+    `<button class="cat-option tappable" onclick="pickCat('${c.id}')">
+      <span>${c.icon} ${c.label}</span>
+      ${currentCat===c.id?'<span style="color:var(--c-primary);">✓</span>':''}
+    </button>`).join('');
+  document.getElementById('cat-sheet').classList.add('open');
+}
+function closeCatSheet(){document.getElementById('cat-sheet').classList.remove('open');}
+function pickCat(id){
+  currentCat=id;const c=CAT_MAP[id];
+  document.getElementById('cat-select-label').textContent=`${c.icon} ${c.label}`;
+  document.getElementById('cat-select-label').style.color='var(--c-text)';
+  closeCatSheet();haptic();
+}
+
+// ══════════════════════════════════════
+// CRUD
+// ══════════════════════════════════════
+function submitItem(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){const i=document.getElementById('inp-name');i.style.borderColor='var(--c-danger)';i.focus();return;}
+  document.getElementById('inp-name').style.borderColor='var(--c-border)';
+  const now=Date.now();
+  const isFrequent=document.getElementById('inp-frequent').checked;
+  const patch={name,shop:currentShop,person:currentPerson,category:currentCat||'other',qty:currentQty,unit:currentUnit,
+    price:parseInt(document.getElementById('inp-price').value)||0,
+    note:document.getElementById('inp-note').value.trim(),updatedAt:now};
+
+  if(editId){
+    syncItems=syncItems.map(i=>i.id===editId?{...i,...patch}:i);
+    showToast('✏️ 更新しました');
+  }else{
+    syncItems.push({id:now,done:false,deleted:false,createdAt:now,...patch});
+    showToast('✅ 追加しました');
+  }
+
+  // よく買うもの登録：テンプレートに独立して保存（名前で重複排除）
+  if(isFrequent){
+    const existing=syncTemplates.find(t=>t.name===name);
+    if(existing){
+      syncTemplates=syncTemplates.map(t=>t.name===name?{...t,...patch,id:t.id}:t);
+    }else{
+      syncTemplates.push({id:'tmpl-'+now,...patch});
+    }
+  }
+
+  haptic();schedulePush();closeModal();render();
+}
+
+async function deleteCurrentItem(){
+  const item=syncItems.find(i=>i.id===editId);
+  const ok=await showConfirm('商品を削除',`「${item?.name}」を削除しますか？`);
+  if(!ok)return;
+  syncItems=syncItems.map(i=>i.id===editId?{...i,deleted:true,updatedAt:Date.now()}:i);
+  haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
+}
+
+function toggleDone(id){
+  syncItems=syncItems.map(i=>i.id===id?{...i,done:!i.done,updatedAt:Date.now()}:i);
+  haptic();schedulePush();render();
+}
+
+async function clearDone(){
+  const count=syncItems.filter(i=>!i.deleted&&i.done).length;
+  if(!count){showToast('購入済みの商品はありません');return;}
+  const ok=await showConfirm('購入済みをクリア',`購入済みの ${count} 件を削除しますか？`,'削除');
+  if(!ok)return;
+  const now=Date.now();
+  syncItems=syncItems.map(i=>(!i.deleted&&i.done)?{...i,deleted:true,updatedAt:now}:i);
+  haptic('heavy');
+  render(); // 即座にUI更新
+  // schedulePushではなく即時同期プッシュ（syncPullによる復活を防ぐ）
+  clearTimeout(pushTimer);
+  if(room.binId&&room.apiKey){
+    try{
+      await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
+      syncOk=true;lastSyncAt=new Date();setDot('green');
+    }catch(e){syncOk=false;setDot('red');}
+  }
+  showToast(`🗑️ ${count}件 クリアしました`);
+}
+
+function addFromFrequent(templateId){
+  const src=syncTemplates.find(t=>t.id===templateId);if(!src)return;
+  const now=Date.now();
+  syncItems.push({id:now,done:false,deleted:false,createdAt:now,updatedAt:now,
+    name:src.name,shop:src.shop||'super',person:src.person||null,category:src.category,
+    qty:src.qty,unit:src.unit,price:src.price,note:src.note});
+  schedulePush();render();showToast(`✅ ${src.name} を追加しました`);showPage('list');
+}
+
+// Swipe delete
+function enableSwipe(el,id){
+  let sx=0,dx=0,sw=false;
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;dx=0;sw=false;},{passive:true});
+  el.addEventListener('touchmove',e=>{
+    dx=e.touches[0].clientX-sx;
+    if(dx<-8)sw=true;
+    if(sw&&dx<0)el.style.transform=`translateX(${Math.max(dx,-80)}px)`;
+  },{passive:true});
+  el.addEventListener('touchend',async()=>{
+    if(sw&&dx<-65){
+      const item=syncItems.find(i=>i.id===id);
+      const ok=await showConfirm('商品を削除',`「${item?.name}」を削除しますか？`);
+      if(ok){syncItems=syncItems.map(i=>i.id===id?{...i,deleted:true,updatedAt:Date.now()}:i);
+        haptic('heavy');schedulePush();render();showToast('🗑️ 削除しました');}
+      else el.style.transform='';
+    }else el.style.transform='';
+    dx=0;sw=false;
+  });
+}
+
+// ══════════════════════════════════════
+// Render
+// ══════════════════════════════════════
+function render(){renderList();renderFrequent();renderBadge();}
+
+function renderList(){
+  const filter=local.filter||'todo';
+
+  // Filter chips
+  document.getElementById('filter-bar').innerHTML=FILTERS.map(f=>
+    `<button class="filter-chip tappable ${f.id===filter?'active':''}" onclick="setFilter('${f.id}');haptic()">${f.label}</button>`).join('');
+
+  // Summary
+  const active=syncItems.filter(i=>!i.deleted);
+  const todo=active.filter(i=>!i.done).length;
+  const priceTodo=active.filter(i=>!i.done&&i.price).reduce((s,i)=>s+i.price*i.qty,0);
+  const priceAll=active.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
+  document.getElementById('summary-bar').innerHTML=`
+    <div><div style="font-size:12px;color:var(--c-sub);">残り / 合計</div>
+    <div style="font-size:15px;font-weight:700;">${todo} / ${active.length}点</div></div>
+    ${priceAll>0?`<div style="text-align:right"><div style="font-size:12px;color:var(--c-sub);">残り予算</div>
+    <div style="font-size:15px;font-weight:700;color:var(--c-primary);">¥${priceTodo.toLocaleString()}</div></div>`:''}
+  `;
+
+  // Filtered items
+  let items=[...active];
+  if(filter==='todo') items=items.filter(i=>!i.done);
+  if(filter==='done') items=items.filter(i=>i.done);
+
+  if(!items.length){
+    const m={all:['🛒','まだ何もありません','右下の＋から追加しましょう'],
+      todo:['✅','すべて購入済みです！','お疲れさまでした'],done:['📭','購入済みはありません','']};
+    const [ic,ti,de]=m[filter];
+    document.getElementById('list-content').innerHTML=
+      `<div class="empty-state"><div class="empty-icon">${ic}</div>
+      <div class="empty-title">${ti}</div><div class="empty-desc">${de}</div></div>`;
+    return;
+  }
+
+  // 担当者グループ順：両方 → たくろう → ゆか
+  // person===null の旧データは'both'扱い
+  const personGroups=[...PERSONS];
+  let html='';
+  personGroups.forEach(pg=>{
+    const pgItems=items.filter(i=>{
+      const p=i.person||'both'; // nullは'both'扱い
+      return p===pg.id;
+    });
+    if(!pgItems.length)return;
+    const pgKey='person-'+(pg.id||'none');
+    const pgCollapsed=(local.collapsedShops||[]).includes(pgKey);
+    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
+    html+=`<div class="person-section">
+      <div class="person-header tappable ${pgCollapsed?'collapsed':''}" onclick="toggleShop('${pgKey}');haptic()">
+        <span class="person-icon">${pg.icon}</span>
+        <span class="person-name">${pg.label}</span>
+        <span class="shop-count">${pgItems.length}</span>
+        ${pgPrice>0?`<span class="shop-price">¥${pgPrice.toLocaleString()}</span>`:''}
+        <span class="shop-toggle">▼</span>
+      </div>
+      <div id="shop-body-${pgKey}" style="${pgCollapsed?'display:none':''}">`;
+    // 買う場所サブグループ
+    SHOPS.forEach(shop=>{
+      const shopItems=pgItems.filter(i=>(i.shop||'super')===shop.id);
+      if(!shopItems.length)return;
+      const shopKey=pgKey+'-'+shop.id;
+      const shopCollapsed=(local.collapsedShops||[]).includes(shopKey);
+      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
+      html+=`<div class="shop-section" style="margin-left:12px;">
+        <div class="shop-header tappable ${shopCollapsed?'collapsed':''}" onclick="toggleShop('${shopKey}');haptic()">
+          <span class="shop-icon">${shop.icon}</span>
+          <span class="shop-name">${shop.label}</span>
+          <span class="shop-count">${shopItems.length}</span>
+          ${shopPrice>0?`<span class="shop-price">¥${shopPrice.toLocaleString()}</span>`:''}
+          <span class="shop-toggle">▼</span>
+        </div>
+        <div id="shop-body-${shopKey}" style="${shopCollapsed?'display:none':''}">
+          ${shopItems.map(item=>renderItemRow(item)).join('')}
+        </div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  document.getElementById('list-content').innerHTML=html;
+  syncItems.forEach(i=>{const el=document.getElementById(`item-inner-${i.id}`);if(el)enableSwipe(el,i.id);});
+}
+
+function renderItemRow(item){
+  const cat=CAT_MAP[item.category]||CAT_MAP['other'];
+  const priceStr=item.price?`<span class="item-price-tag">¥${(item.price*item.qty).toLocaleString()}</span>`:'';
+  const noteStr=item.note?`<div class="item-note-inline">📝 ${escHtml(item.note)}</div>`:'';
+  return `<div class="item-card ${item.done?'done':''}" style="position:relative;">
+    <div class="item-delete-bg"><span>🗑️</span></div>
+    <div id="item-inner-${item.id}" style="background:var(--c-bg);border-radius:var(--radius-s);">
+      <div class="item-row">
+        <button class="check-btn ${item.done?'checked':''}" onclick="toggleDone(${item.id});haptic()">
+          ${item.done?'✓':''}</button>
+        <span class="item-name">${escHtml(item.name)}</span>
+        <div class="item-right">
+          <span class="cat-tag">${cat.icon}</span>
+          <span class="item-qty">${item.qty}${item.unit||'個'}</span>
+          ${priceStr}
+          <button class="tappable" onclick="openEditModal(${item.id})"
+            style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:2px 0 2px 2px;">›</button>
+        </div>
+      </div>
+      ${noteStr}
+    </div>
+  </div>`;
+}
+
+function renderFrequent(){
+  const el=document.getElementById('freq-content');
+  if(!syncTemplates.length){
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">⭐</div>
+      <div class="empty-title">よく買うものがありません</div>
+      <div class="empty-desc">商品追加時に「よく買うものに登録」をオンにすると表示されます</div></div>`;
+    return;
+  }
+  el.innerHTML=syncTemplates.map(item=>{
+    const shop=SHOP_MAP[item.shop||'super'];
+    const cat=CAT_MAP[item.category]||CAT_MAP['other'];
+    return `<div class="freq-card">
+      <span style="font-size:22px;">${shop.icon}</span>
+      <div class="freq-info">
+        <div style="font-size:14px;font-weight:600;">${escHtml(item.name)}</div>
+        <div style="font-size:12px;color:var(--c-sub);margin-top:2px;">
+          ${shop.label} • ${cat.icon}${cat.label}${item.price?' • ¥'+item.price:''} • ${item.qty}${item.unit||'個'}
+        </div>
+      </div>
+      <button class="tappable" onclick="removeTemplate('${item.id}')"
+        style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:4px 6px;margin-right:2px;">🗑</button>
+      <button class="freq-add-btn tappable" onclick="addFromFrequent('${item.id}');haptic()">＋</button>
+    </div>`;}).join('');
+}
+
+async function removeTemplate(id){
+  const tmpl=syncTemplates.find(t=>t.id===id);
+  const ok=await showConfirm('よく買うものから削除',`「${tmpl?.name}」を削除しますか？`);
+  if(!ok)return;
+  syncTemplates=syncTemplates.filter(t=>t.id!==id);
+  haptic('heavy');schedulePush();renderFrequent();showToast('🗑️ 削除しました');
+}
+
+function renderBadge(){
+  const count=syncItems.filter(i=>!i.deleted&&!i.done).length;
+  const b=document.getElementById('badge-list');
+  b.style.display=count>0?'inline-block':'none';
+  b.textContent=count>99?'99+':count;
+}
+
+function setFilter(f){local.filter=f;saveLocal();renderList();}
+
+function toggleShop(id){
+  const cs=local.collapsedShops||[];
+  local.collapsedShops=cs.includes(id)?cs.filter(x=>x!==id):[...cs,id];
+  saveLocal();
+  const body=document.getElementById(`shop-body-${id}`);
+  const head=body?.previousElementSibling;
+  if(body)body.style.display=body.style.display==='none'?'':'none';
+  if(head)head.classList.toggle('collapsed');
+}
+
+function showPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  document.getElementById('page-title').textContent={list:'🛒 買い物リスト',freq:'⭐ よく買うもの'}[page]||'';
+  document.getElementById('header-clear').style.display=page==='list'?'':'none';
+  document.getElementById('fab').style.display=page==='list'?'':'none';
+  render();
+}
+
+// ══════════════════════════════════════
+// Init
+// ══════════════════════════════════════
+// ボトムシートに下スワイプ閉じるを登録
+enableSheetSwipeClose(document.querySelector('#modal .modal-sheet'),     closeModal);
+enableSheetSwipeClose(document.querySelector('#cat-sheet .modal-sheet'), closeCatSheet);
+enableSheetSwipeClose(document.querySelector('#sync-modal .modal-sheet'),closeSyncModal);
+setDot('');
+if(!room.binId||!room.apiKey){
+  document.getElementById('setup-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}else{
+  // 旧データ移行チェック（初回ロード時）
+  if(migrateFrequentItems()) schedulePush();
+  startSync();
+}
+showPage('list');
+</script>
+</body>
+</html>
