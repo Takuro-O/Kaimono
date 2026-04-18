@@ -271,6 +271,23 @@
     </div>
   </header>
 
+  <!-- 致命的な同期エラー用バナー -->
+  <div id="fatal-banner" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 14px;">
+    <div style="display:flex;align-items:flex-start;gap:8px;">
+      <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+      <div style="flex:1;min-width:0;">
+        <div id="fatal-banner-title" style="font-size:13px;font-weight:700;color:var(--c-danger);margin-bottom:2px;">同期できません</div>
+        <div id="fatal-banner-msg" style="font-size:12px;color:var(--c-text);line-height:1.5;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="tappable" onclick="reauthOpen()"
+            style="padding:6px 12px;background:var(--c-primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;">再セットアップ</button>
+          <button class="tappable" onclick="dismissFatalBanner()"
+            style="padding:6px 12px;background:transparent;color:var(--c-sub);border:1px solid var(--c-border);border-radius:6px;font-size:12px;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <main>
     <div id="page-list" class="page active">
       <div class="filter-bar" id="filter-bar"></div>
@@ -329,7 +346,9 @@
     </div>
     <div class="step-row" style="margin-bottom:10px;">
       <span class="step-badge">3</span>
-      <div style="flex:1;"><div class="step-title">ここに貼り付けて作成</div></div>
+      <div style="flex:1;"><div class="step-title">ここに貼り付けて作成</div>
+        <div class="step-desc">Master Keyは部屋作成時のみ使用され、<br>アプリには<strong>保存されません</strong>。<br>以降は権限を限定したキーで通信します。</div>
+      </div>
     </div>
     <div class="form-mb" style="margin-left:32px;">
       <input class="form-input" id="master-key-input" type="password"
@@ -495,6 +514,7 @@
 // ══════════════════════════════════════
 const LOCAL_KEY = 'shoplist-v6-local';
 const ROOM_KEY  = 'shoplist-v6-room';
+const DATA_KEY  = 'shoplist-v6-data';   // syncItems/syncTemplates のローカルキャッシュ
 const SYNC_MS   = 15000;
 const API       = 'https://api.jsonbin.io/v3/b';
 
@@ -529,22 +549,105 @@ const FILTERS = [{id:'all',label:'すべて'},{id:'todo',label:'未購入'},{id:
 // ══════════════════════════════════════
 // State
 // ══════════════════════════════════════
-let local, room={binId:null,apiKey:null}, syncItems=[], syncTemplates=[], syncOk=false, lastSyncAt=null;
+let local, room={binId:null,apiKey:null,keyType:null}, syncItems=[], syncTemplates=[], lastSyncAt=null;
 let syncTimer=null, pushTimer=null;
+
+// 同期ステータス詳細
+// status: 'idle' | 'syncing' | 'ok' | 'offline' | 'error' | 'fatal'
+// fatalReason: 401='認証エラー', 403='権限不足', 404='部屋が見つかりません'
+// lastErrorAt, lastErrorMsg: デバッグ用
+const syncState = {
+  status: 'idle',
+  fatalReason: null,
+  lastErrorStatus: null,
+  lastErrorMsg: null,
+  lastErrorAt: null,
+};
+
+// ══════════════════════════════════════
+// データ正規化（サーバー・ローカル両方の入り口で使う）
+// ══════════════════════════════════════
+// - 悪意ある同居人や Bin アカウント乗っ取り攻撃から UI を守る
+// - 想定外の型を早めに弾いて XSS・描画崩れを防ぐ
+// - 過剰に長い文字列は切り詰める（メモリ・レンダリング保護）
+const MAX_STR = 500;
+function clampStr(v, max){
+  if(typeof v!=='string')return '';
+  const m=max||MAX_STR;
+  return v.length>m?v.slice(0,m):v;
+}
+function sanitizeItems(raw){
+  if(!Array.isArray(raw))return [];
+  return raw.map(r=>{
+    if(!r||typeof r!=='object')return null;
+    return {
+      id: clampStr(String(r.id||''), 100),
+      name: clampStr(r.name, 80),
+      note: clampStr(r.note, 200),
+      category: clampStr(r.category, 30),
+      shop: clampStr(r.shop, 30),
+      person: r.person===null?null:clampStr(r.person, 30),
+      unit: clampStr(r.unit, 20),
+      qty: Math.max(0, Math.min(99999, Number(r.qty)||0)),
+      price: Math.max(0, Math.min(99999, Number(r.price)||0)),
+      done: !!r.done,
+      deleted: !!r.deleted,
+      frequent: !!r.frequent, // legacy
+      createdAt: Number(r.createdAt)||0,
+      updatedAt: Number(r.updatedAt)||0,
+    };
+  }).filter(r=>r&&r.id);  // idが無いものは捨てる
+}
 
 try{ local=JSON.parse(localStorage.getItem(LOCAL_KEY))||{filter:'todo',collapsedShops:[]}; }
 catch(e){ local={filter:'todo',collapsedShops:[]}; }
 try{ const r=localStorage.getItem(ROOM_KEY); if(r) room=JSON.parse(r); }
 catch(e){}
+// データもローカルに保存しておき、起動時に即表示できるようにする
+// （オフラインでも買い物リストが見える、pull待ち中も空白にならない）
+try{
+  const d=localStorage.getItem(DATA_KEY);
+  if(d){
+    const parsed=JSON.parse(d);
+    syncItems=sanitizeItems(parsed?.items);
+    syncTemplates=sanitizeItems(parsed?.templates);
+  }
+}catch(e){}
 
 const saveLocal = ()=>{ try{localStorage.setItem(LOCAL_KEY,JSON.stringify(local));}catch(e){} };
 const saveRoom  = ()=>{ try{localStorage.setItem(ROOM_KEY,JSON.stringify(room));}catch(e){} };
+const saveData  = ()=>{ try{localStorage.setItem(DATA_KEY,JSON.stringify({items:syncItems,templates:syncTemplates}));}catch(e){} };
 
 // ══════════════════════════════════════
 // Utils
 // ══════════════════════════════════════
 const haptic=(t='light')=>navigator.vibrate?.(t==='heavy'?30:10);
-const escHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const escHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+// ID比較は必ず文字列化して行う（旧データのnumeric IDと新UUIDの混在に対応）
+const sameId=(a,b)=>String(a)===String(b);
+
+// 衝突しないID生成
+// - Secure Context (HTTPS) では crypto.randomUUID() を使う
+// - file://や古いブラウザではgetRandomValuesにフォールバック
+// - さらにその先でもMath.randomで最低限動作する
+function newId(prefix=''){
+  let core;
+  if(typeof crypto!=='undefined'){
+    if(typeof crypto.randomUUID==='function'){
+      core=crypto.randomUUID();
+    }else if(typeof crypto.getRandomValues==='function'){
+      const a=new Uint8Array(16);
+      crypto.getRandomValues(a);
+      core=Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }
+  if(!core){
+    // 最終フォールバック（暗号学的ではないが衝突確率は十分低い）
+    core=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)+'-'+Math.random().toString(36).slice(2,10);
+  }
+  return prefix?prefix+core:core;
+}
 
 let _toastT;
 function showToast(msg,dur=2200){
@@ -555,23 +658,46 @@ function showToast(msg,dur=2200){
     setTimeout(()=>t.style.display='none',300);},dur);
 }
 
-// ── Confirm: DOM-event based (Promiseではなくコールバック方式でz-index競合を回避) ──
-let _confirmOkCb=null, _confirmCancelCb=null;
+// ── Confirm ダイアログ ──
+// 同時呼び出しはキューで直列化する（先のdialogが閉じるまで次は待つ）
+// AbortController でリスナーをまとめてcleanup
+let _confirmChain = Promise.resolve();
 
 function showConfirm(title, msg, okLabel='削除', okClass=''){
-  document.getElementById('confirm-title').textContent=title;
-  document.getElementById('confirm-msg').textContent=msg;
-  const okBtn=document.getElementById('confirm-ok-btn');
-  const cancelBtn=document.getElementById('confirm-cancel-btn');
-  okBtn.textContent=okLabel;
-  okBtn.className='confirm-ok tappable'+(okClass?' '+okClass:'');
-  document.getElementById('confirm-overlay').classList.add('open');
-  return new Promise(resolve=>{
-    _confirmOkCb=()=>{ closeConfirmDialog(); resolve(true); };
-    _confirmCancelCb=()=>{ closeConfirmDialog(); resolve(false); };
-    okBtn.onclick=_confirmOkCb;
-    cancelBtn.onclick=_confirmCancelCb;
-  });
+  const job = async () => {
+    return new Promise(resolve => {
+      document.getElementById('confirm-title').textContent=title;
+      document.getElementById('confirm-msg').textContent=msg;
+      const okBtn=document.getElementById('confirm-ok-btn');
+      const cancelBtn=document.getElementById('confirm-cancel-btn');
+      okBtn.textContent=okLabel;
+      okBtn.className='confirm-ok tappable'+(okClass?' '+okClass:'');
+      const overlay=document.getElementById('confirm-overlay');
+      overlay.classList.add('open');
+
+      const ac=new AbortController();
+      const signal=ac.signal;
+      const done=(result)=>{
+        overlay.classList.remove('open');
+        ac.abort();
+        resolve(result);
+      };
+      okBtn.addEventListener('click', ()=>done(true), {signal});
+      cancelBtn.addEventListener('click', ()=>done(false), {signal});
+      // 背景タップで閉じる（キャンセル扱い）
+      overlay.addEventListener('click', e=>{
+        if(e.target===overlay) done(false);
+      }, {signal});
+      // Escキーでキャンセル
+      document.addEventListener('keydown', e=>{
+        if(e.key==='Escape') done(false);
+      }, {signal});
+    });
+  };
+  // 直列化：前のconfirmが閉じるまで次は表示しない
+  const next = _confirmChain.then(job, job);
+  _confirmChain = next.catch(()=>{});
+  return next;
 }
 function closeConfirmDialog(){
   document.getElementById('confirm-overlay').classList.remove('open');
@@ -580,109 +706,391 @@ function closeConfirmDialog(){
 // ══════════════════════════════════════
 // JSONBin API
 // ══════════════════════════════════════
-async function binCreate(apiKey,data){
+// Bin作成はMaster Keyでのみ実行（作成後すぐ破棄）
+// BinはPrivateで作成し、以降はAccess Keyで読み書きする
+async function binCreateWithMasterKey(masterKey,data){
   const r=await fetch(API,{method:'POST',
-    headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Name':'shopping-list','X-Bin-Private':'false'},
+    headers:{'Content-Type':'application/json','X-Master-Key':masterKey,'X-Bin-Name':'shopping-list','X-Bin-Private':'true'},
     body:JSON.stringify({items:data,templates:[]})});
   if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`${r.status}: ${t}`);}
   const j=await r.json();
   return j.metadata?.id||j.id;
 }
-async function binGet(apiKey,binId){
-  const r=await fetch(`${API}/${binId}/latest`,{headers:{'X-Master-Key':apiKey}});
-  if(!r.ok) throw new Error(`GET ${r.status}`);
+// Access Key発行（Bins Read + Update のみ、Create/Deleteは付与しない）
+// 作成後、Master Keyはローカルから即座に破棄される
+async function createAccessKey(masterKey){
+  // Key名は最大32文字制限。Date.now()13桁+接頭辞で収める
+  const keyName='shoplist-'+Date.now();
+  const r=await fetch('https://api.jsonbin.io/v3/a',{method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'X-Master-Key':masterKey,
+      'X-Key-Name':keyName,
+    },
+    body:JSON.stringify({
+      bins:{read:true,update:true,create:false,delete:false},
+    })});
+  if(!r.ok){
+    const t=await r.text().catch(()=>'');
+    // 上限エラーを分かりやすく
+    if(r.status===400&&/3 access keys/i.test(t)){
+      throw new Error('Access Keyが上限（3個）に達しています。jsonbin.io のAPI Keysページで不要なキーを削除してください');
+    }
+    throw new Error(`AccessKey ${r.status}: ${t}`);
+  }
+  const j=await r.json();
+  if(!j.accessKey) throw new Error('Access Keyの取得に失敗しました');
+  return j.accessKey;
+}
+// 同期エラー: HTTPステータスコード付き例外
+// status: HTTPステータス（0なら通信エラー／オフライン）
+// fatal: 自動リトライしても直らない種類か（401/403/404）
+class SyncError extends Error {
+  constructor(message, status, fatal){
+    super(message);
+    this.name='SyncError';
+    this.status=status;
+    this.fatal=fatal;
+  }
+}
+const isFatalStatus = s => s===401 || s===403 || s===404;
+
+// 以降の読み書きはAccess Keyを使用
+async function binGet(accessKey,binId){
+  let r;
+  try{
+    r=await fetch(`${API}/${binId}/latest`,{headers:{'X-Access-Key':accessKey}});
+  }catch(e){
+    // ネットワーク/CORS/オフライン: status=0
+    throw new SyncError('ネットワークエラー: '+e.message, 0, false);
+  }
+  if(!r.ok){
+    const body=await r.text().catch(()=>'');
+    throw new SyncError(`GET ${r.status}: ${body.slice(0,200)}`, r.status, isFatalStatus(r.status));
+  }
   const j=await r.json();
   const rec=j.record||j;
-  return {items:rec.items||[], templates:rec.templates||[]};
+  return {items:sanitizeItems(rec.items), templates:sanitizeItems(rec.templates)};
 }
-async function binPut(apiKey,binId,items,templates){
-  const r=await fetch(`${API}/${binId}`,{method:'PUT',
-    headers:{'Content-Type':'application/json','X-Master-Key':apiKey},
-    body:JSON.stringify({items,templates})});
-  if(!r.ok) throw new Error(`PUT ${r.status}`);
+async function binPut(accessKey,binId,items,templates){
+  let r;
+  try{
+    r=await fetch(`${API}/${binId}`,{method:'PUT',
+      headers:{'Content-Type':'application/json','X-Access-Key':accessKey},
+      body:JSON.stringify({items,templates})});
+  }catch(e){
+    throw new SyncError('ネットワークエラー: '+e.message, 0, false);
+  }
+  if(!r.ok){
+    const body=await r.text().catch(()=>'');
+    throw new SyncError(`PUT ${r.status}: ${body.slice(0,200)}`, r.status, isFatalStatus(r.status));
+  }
 }
 
-function encodeInvite(apiKey,binId){
-  return btoa(encodeURIComponent(JSON.stringify({k:apiKey,b:binId})));
+function encodeInvite(accessKey,binId){
+  return btoa(encodeURIComponent(JSON.stringify({k:accessKey,b:binId})));
 }
 function decodeInvite(code){
-  try{const s=decodeURIComponent(atob(code.trim()));const o=JSON.parse(s);if(o.k&&o.b)return o;}catch(e){}
+  try{
+    const cleaned=code.trim().replace(/\s+/g,'');
+    const s=decodeURIComponent(atob(cleaned));
+    const o=JSON.parse(s);
+    if(typeof o.k==='string'&&typeof o.b==='string'&&o.k&&o.b)return o;
+  }catch(e){}
   return null;
 }
 
 // ══════════════════════════════════════
 // Sync
 // ══════════════════════════════════════
-function setDot(color){
+// 同期状態を一元管理して UI に反映
+// 副作用: dot色と sync モーダルの表示を更新
+function updateSyncUI(){
+  const color = {
+    idle:    '',
+    syncing: 'yellow',
+    ok:      'green',
+    offline: '',
+    error:   'yellow',  // 一時的エラーは syncing と同じ見た目（リトライ中）
+    fatal:   'red',
+  }[syncState.status] || '';
   ['sync-dot','sync-dot-modal'].forEach(id=>{
     const d=document.getElementById(id);
     if(d)d.className='sync-dot'+(color?' '+color:'');
   });
+  // syncモーダルが開いていたら status textも更新
+  const txt=document.getElementById('sync-status-text');
+  if(txt){
+    txt.textContent=statusToText(syncState);
+  }
 }
+
+function statusToText(s){
+  switch(s.status){
+    case 'idle':    return '⚪ 未接続';
+    case 'syncing': return '🟡 同期中…';
+    case 'ok':      return '🟢 同期済み';
+    case 'offline': return '📴 オフライン';
+    case 'error':   return `🟡 一時的エラー（再試行中）${s.lastErrorStatus?' - '+s.lastErrorStatus:''}`;
+    case 'fatal':   return `🔴 ${s.fatalReason||'同期できません'}`;
+    default:        return '';
+  }
+}
+
+function markSyncOk(){
+  syncState.status='ok';
+  syncState.fatalReason=null;
+  syncState.lastErrorStatus=null;
+  syncState.lastErrorMsg=null;
+  lastSyncAt=new Date();
+  updateSyncUI();
+}
+
+function markSyncError(err){
+  syncState.lastErrorStatus=err?.status??null;
+  syncState.lastErrorMsg=err?.message||String(err);
+  syncState.lastErrorAt=new Date();
+  if(err instanceof SyncError && err.fatal){
+    syncState.status='fatal';
+    syncState.fatalReason={
+      401:'認証エラー（Access Keyが無効）',
+      403:'権限不足（Access Keyに読み書き権限がありません）',
+      404:'部屋が見つかりません（Binが削除された可能性）',
+    }[err.status]||'致命的エラー';
+    // 致命エラー時は polling を停止（無駄打ち防止）
+    if(syncTimer){clearInterval(syncTimer);syncTimer=null;}
+    console.warn('[sync] fatal:', err);
+  }else if(err?.status===0 || !navigator.onLine){
+    syncState.status='offline';
+    // オフラインは想定内なのでlogしない（spam防止）
+  }else{
+    syncState.status='error';
+    console.warn('[sync]', err);
+  }
+  updateSyncUI();
+}
+
+// 致命的エラー時のバナー表示
+function showFatalBanner(err){
+  const b=document.getElementById('fatal-banner');
+  if(!b)return;
+  const titles={
+    401:'認証エラー',
+    403:'権限不足',
+    404:'部屋が見つかりません',
+  };
+  const msgs={
+    401:'Access Keyが無効化されています。再セットアップすると解決します。',
+    403:'Access Keyに必要な権限がありません。再セットアップしてください。',
+    404:'部屋（Bin）が削除されたか、IDが間違っています。招待コードで再参加するか、新しく部屋を作ってください。',
+  };
+  document.getElementById('fatal-banner-title').textContent=titles[err?.status]||'同期エラー';
+  document.getElementById('fatal-banner-msg').textContent=msgs[err?.status]||err?.message||'同期できません。';
+  b.style.display='block';
+}
+function dismissFatalBanner(){
+  const b=document.getElementById('fatal-banner');
+  if(b)b.style.display='none';
+}
+function reauthOpen(){
+  dismissFatalBanner();
+  teardownSync();
+  room={binId:null,apiKey:null,keyType:null};saveRoom();
+  syncItems=[];syncTemplates=[];saveData();
+  syncState.status='idle';syncState.fatalReason=null;
+  document.getElementById('setup-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  render();
+}
+
+// ネットワーク状態の監視（オフライン→オンライン復帰時に自動再同期）
+window.addEventListener('online', ()=>{
+  if(!room.binId||!room.apiKey)return;
+  if(syncState.status==='fatal')return;
+  // オフラインから復帰 → 即 pull して最新同期
+  syncPull();
+});
+window.addEventListener('offline', ()=>{
+  syncState.status='offline';
+  updateSyncUI();
+});
+
+// 可視性の監視（タブが隠れている間はpollingを停止してバッテリーとrate limitを節約）
+// 表示に戻ったら即 pull して最新同期
+document.addEventListener('visibilitychange', ()=>{
+  if(!room.binId||!room.apiKey)return;
+  if(document.visibilityState==='hidden'){
+    // バックグラウンド → polling停止
+    if(syncTimer){clearInterval(syncTimer); syncTimer=null;}
+  }else{
+    // フォアグラウンド復帰
+    if(syncState.status==='fatal')return;
+    // 即座に pull
+    syncPull();
+    // polling再開（すでに動いていないことを確認してから）
+    if(!syncTimer){
+      syncTimer=setInterval(syncPull,SYNC_MS);
+    }
+  }
+});
+// 削除tombstoneの保持期間（30日）
+// この期間内はオフラインデバイスが復帰しても削除を正しく伝搬できる
+const TOMBSTONE_MS = 30 * 24 * 60 * 60 * 1000;
+
+// LWW (Last-Write-Wins) マージ
+// - Mapキーは文字列に強制（legacyの数値IDと新UUIDの混在対策）
+// - updatedAt が新しい方を採用
+// - updatedAt が同じ場合のみ削除を優先（競合時の安全側）
 function mergeItems(a,b){
   const map=new Map();
-  b.forEach(i=>map.set(i.id,i));
-  a.forEach(i=>{
-    const ex=map.get(i.id);
-    if(!ex){map.set(i.id,i);return;}
-    // 削除済みは必ず優先（タイムスタンプに関わらず削除を採用）
-    if(i.deleted&&!ex.deleted){map.set(i.id,i);return;}
-    if(!i.deleted&&ex.deleted){return;} // 相手が削除済み→そちらを採用(何もしない)
-    // 両方とも同じ状態なら新しい方を採用
-    if((i.updatedAt||0)>=(ex.updatedAt||0)){map.set(i.id,i);}
-  });
-  const cut=Date.now()-4*60*60*1000;
+  const put=(i)=>{
+    const key=String(i.id);
+    const ex=map.get(key);
+    if(!ex){map.set(key,i);return;}
+    const aTs=i.updatedAt||0, bTs=ex.updatedAt||0;
+    if(aTs>bTs){map.set(key,i);return;}
+    if(aTs<bTs)return;
+    // 同時刻 → 削除を優先
+    if(i.deleted&&!ex.deleted) map.set(key,i);
+  };
+  b.forEach(put);
+  a.forEach(put);
+  // 30日より古いtombstoneのみ物理削除
+  const cut=Date.now()-TOMBSTONE_MS;
   return [...map.values()].filter(i=>!(i.deleted&&(i.updatedAt||0)<cut));
 }
-// テンプレートはsoft-deleteなし、名前ベースで上書き
+// テンプレートもsoft-deleteで同期。items と同じロジック
 function mergeTemplates(a,b){
   const map=new Map();
-  b.forEach(i=>map.set(i.id,i));
-  a.forEach(i=>{const ex=map.get(i.id);if(!ex||(i.updatedAt||0)>=(ex.updatedAt||0))map.set(i.id,i);});
-  return [...map.values()];
+  const put=(i)=>{
+    const key=String(i.id);
+    const ex=map.get(key);
+    if(!ex){map.set(key,i);return;}
+    const aTs=i.updatedAt||0, bTs=ex.updatedAt||0;
+    if(aTs>bTs){map.set(key,i);return;}
+    if(aTs<bTs)return;
+    if(i.deleted&&!ex.deleted) map.set(key,i);
+  };
+  b.forEach(put);
+  a.forEach(put);
+  const cut=Date.now()-TOMBSTONE_MS;
+  return [...map.values()].filter(i=>!(i.deleted&&(i.updatedAt||0)<cut));
 }
+// ── 同期ロック ──
+// pull と push を直列化してrace conditionを防ぐ
+// Promiseチェーンで全ての remote 操作を順番に実行する
+let _syncChain = Promise.resolve();
+function runExclusive(fn){
+  const next = _syncChain.then(fn, fn);
+  // チェーンが一度失敗してもその後の操作は続行させる
+  _syncChain = next.catch(()=>{});
+  return next;
+}
+
 async function syncPull(){
   if(!room.binId||!room.apiKey)return;
-  setDot('yellow');
-  try{
-    const remote=await binGet(room.apiKey,room.binId);
-    const remoteItems=remote.items;
-    const remoteTemplates=remote.templates;
+  // 致命的エラー状態ではそもそも試行しない（ユーザー操作で解決するまで）
+  if(syncState.status==='fatal')return;
+  // オフラインなら接続エラーで終わるだけなのでスキップ
+  if(!navigator.onLine){
+    syncState.status='offline';
+    updateSyncUI();
+    return;
+  }
+  // pullが予約されているならpending pushは一度キャンセル（pull→必要ならpushで統合）
+  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
+  return runExclusive(async()=>{
+    if(!room.binId||!room.apiKey)return;  // 途中でleaveされた場合
+    if(syncState.status==='fatal')return; // 実行順が来るまでに fatal 確定の可能性
+    syncState.status='syncing';
+    updateSyncUI();
+    try{
+      const remote=await binGet(room.apiKey,room.binId);
+      const remoteItems=remote.items;
+      const remoteTemplates=remote.templates;
 
-    const mergedItems=mergeItems(syncItems,remoteItems);
-    const mergedTemplates=mergeTemplates(syncTemplates,remoteTemplates);
+      const mergedItems=mergeItems(syncItems,remoteItems);
+      const mergedTemplates=mergeTemplates(syncTemplates,remoteTemplates);
 
-    const hasRemoteItemChanges=mergedItems.length!==syncItems.length||remoteItems.some(r=>{
-      const cur=syncItems.find(x=>x.id===r.id);
-      return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
-    });
-    const hasRemoteTemplateChanges=mergedTemplates.length!==syncTemplates.length||remoteTemplates.some(r=>{
-      const cur=syncTemplates.find(x=>x.id===r.id);
-      return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
-    });
+      const hasRemoteItemChanges=mergedItems.length!==syncItems.length||remoteItems.some(r=>{
+        const cur=syncItems.find(x=>sameId(x.id,r.id));
+        return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
+      });
+      const hasRemoteTemplateChanges=mergedTemplates.length!==syncTemplates.length||remoteTemplates.some(r=>{
+        const cur=syncTemplates.find(x=>sameId(x.id,r.id));
+        return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
+      });
 
-    const rimapItems=new Map(remoteItems.map(i=>[i.id,i]));
-    const rimapTmpl=new Map(remoteTemplates.map(i=>[i.id,i]));
-    const needPush=
-      syncItems.some(i=>{const r=rimapItems.get(i.id);return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedItems.length!==remoteItems.length||
-      syncTemplates.some(i=>{const r=rimapTmpl.get(i.id);return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedTemplates.length!==remoteTemplates.length;
+      const rimapItems=new Map(remoteItems.map(i=>[String(i.id),i]));
+      const rimapTmpl=new Map(remoteTemplates.map(i=>[String(i.id),i]));
+      const needPush=
+        syncItems.some(i=>{const r=rimapItems.get(String(i.id));return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedItems.length!==remoteItems.length||
+        syncTemplates.some(i=>{const r=rimapTmpl.get(String(i.id));return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedTemplates.length!==remoteTemplates.length;
 
-    syncItems=mergedItems;
-    syncTemplates=mergedTemplates;
-    syncOk=true;lastSyncAt=new Date();setDot('green');
-    if(hasRemoteItemChanges||hasRemoteTemplateChanges)render();
-    if(needPush)await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
-  }catch(e){syncOk=false;setDot('red');}
+      syncItems=mergedItems;
+      syncTemplates=mergedTemplates;
+      saveData();  // merge結果をローカルキャッシュに保存
+      if(hasRemoteItemChanges||hasRemoteTemplateChanges)render();
+      // 同じlock内でPUTするのでrace condition無し
+      if(needPush)await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
+      markSyncOk();
+    }catch(e){
+      markSyncError(e);
+      // 致命エラーはバナー表示でユーザーに通知
+      if(e instanceof SyncError && e.fatal){
+        showFatalBanner(e);
+      }
+    }
+  });
 }
+
+// push デバウンス: 700ms無操作で lock 取ってPUT
+// ローカルにも即座に保存（オフライン起動時でも直近の状態を復元できる）
 function schedulePush(){
+  saveData();  // ローカル保存は即時（次回起動時用のバックアップ）
   clearTimeout(pushTimer);
-  pushTimer=setTimeout(async()=>{
-    if(!room.binId||!room.apiKey)return;
-    try{await binPut(room.apiKey,room.binId,syncItems,syncTemplates);syncOk=true;lastSyncAt=new Date();setDot('green');}
-    catch(e){syncOk=false;setDot('red');}
+  pushTimer=setTimeout(()=>{
+    pushTimer=null;
+    runExclusive(async()=>{
+      if(!room.binId||!room.apiKey)return;
+      if(syncState.status==='fatal')return;
+      try{
+        await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
+        markSyncOk();
+      }catch(e){
+        markSyncError(e);
+        if(e instanceof SyncError && e.fatal){
+          showFatalBanner(e);
+        }
+      }
+    });
   },700);
 }
-function startSync(){clearInterval(syncTimer);syncTimer=setInterval(syncPull,SYNC_MS);syncPull();}
+// 同期の全停止: timer, pending push, room情報
+// 呼び出し後は「新しい部屋が設定されるまで」同期が一切走らない
+function teardownSync(){
+  clearInterval(syncTimer); syncTimer=null;
+  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
+  // in-flightなPUT/GETはキャンセルできないが、完了時に room が null のためguardで弾かれる
+  // (binPut/binGet自体は成功しても、完了後のstate更新時にroom=nullなら何もしない)
+  syncState.status='idle';
+  syncState.fatalReason=null;
+  dismissFatalBanner();
+  updateSyncUI();
+}
+
+function startSync(){
+  clearInterval(syncTimer);
+  // 新セッション開始 → 前回のエラー状態をクリア
+  syncState.status='idle';
+  syncState.fatalReason=null;
+  syncState.lastErrorStatus=null;
+  syncState.lastErrorMsg=null;
+  dismissFatalBanner();
+  updateSyncUI();
+  syncTimer=setInterval(syncPull,SYNC_MS);
+  syncPull();
+}
 
 // 旧データ移行：syncItemsにfrequent:trueがあればsyncTemplatesに移す
 function migrateFrequentItems(){
@@ -690,14 +1098,14 @@ function migrateFrequentItems(){
   if(!freqItems.length)return false;
   let changed=false;
   freqItems.forEach(item=>{
-    const already=syncTemplates.some(t=>t.name===item.name);
+    const already=syncTemplates.some(t=>!t.deleted&&t.name===item.name);
     if(!already){
       const {done,deleted,createdAt,...rest}=item;
       syncTemplates.push({id:'tmpl-migrated-'+item.id,...rest,updatedAt:Date.now()});
       changed=true;
     }
     // syncItemsからfrequentフラグを除去
-    syncItems=syncItems.map(i=>i.id===item.id?{...i,frequent:undefined}:i);
+    syncItems=syncItems.map(i=>sameId(i.id,item.id)?{...i,frequent:undefined}:i);
   });
   return changed;
 }
@@ -709,16 +1117,34 @@ function showSetupError(id,msg){const e=document.getElementById(id);e.textConten
 function closeSetup(){document.getElementById('setup-overlay').classList.remove('open');document.body.style.overflow='';}
 
 async function createRoom(){
-  const key=document.getElementById('master-key-input').value.trim();
-  if(!key){showSetupError('create-error','APIキーを入力してください');return;}
+  const masterKeyInput=document.getElementById('master-key-input');
+  let masterKey=masterKeyInput.value.trim();
+  if(!masterKey){showSetupError('create-error','Master Keyを入力してください');return;}
   const btn=document.getElementById('create-btn');
   btn.disabled=true;btn.textContent='作成中…';showSetupError('create-error','');
   try{
-    const binId=await binCreate(key,[]);
-    room={binId,apiKey:key};saveRoom();closeSetup();startSync();
+    // 1. Bin作成（Private）
+    btn.textContent='部屋を作成中…';
+    const binId=await binCreateWithMasterKey(masterKey,[]);
+    // 2. Access Key発行（この部屋専用、読み書きのみ可）
+    btn.textContent='権限を設定中…';
+    let accessKey;
+    try{
+      accessKey=await createAccessKey(masterKey);
+    }catch(e){
+      // Access Key発行に失敗した場合でも、Master Keyを保存せず中断
+      masterKey='';
+      masterKeyInput.value='';
+      throw new Error('Access Keyの発行に失敗しました（3個上限の可能性。jsonbin.ioのAPI Keys画面で古いキーを削除してください）:\n'+e.message);
+    }
+    // 3. Master Keyを即座に破棄（メモリからもDOMからも）
+    masterKey='';
+    masterKeyInput.value='';
+    // 4. 以降はAccess Keyのみで動作
+    room={binId,apiKey:accessKey,keyType:'access'};saveRoom();closeSetup();startSync();
     showToast('✅ 部屋を作りました！招待コードを家族に送ってください');
   }catch(e){
-    showSetupError('create-error','作成に失敗しました。APIキーを確認してください。\n（'+e.message+'）');
+    showSetupError('create-error','作成に失敗しました。\n（'+e.message+'）');
     btn.disabled=false;btn.textContent='部屋を作る';
   }
 }
@@ -731,8 +1157,8 @@ async function joinRoom(btn){
   btn.disabled=true;btn.textContent='接続中…';
   try{
     const data=await binGet(obj.k,obj.b);
-    room={binId:obj.b,apiKey:obj.k};saveRoom();
-    syncItems=data.items; syncTemplates=data.templates;
+    room={binId:obj.b,apiKey:obj.k,keyType:'access'};saveRoom();
+    syncItems=data.items; syncTemplates=data.templates;saveData();
     closeSetup();startSync();showToast('✅ 部屋に参加しました');render();
   }catch(e){
     showSetupError('join-error','接続に失敗しました。\n（'+e.message+'）');
@@ -742,7 +1168,8 @@ async function joinRoom(btn){
 async function confirmLeaveRoom(){
   const ok=await showConfirm('部屋を切り替える','現在の部屋から離れます。\nデータはサーバーに残ります。','切り替える','primary');
   if(!ok)return;
-  clearInterval(syncTimer);room={binId:null,apiKey:null};saveRoom();syncItems=[];syncTemplates=[];
+  teardownSync();
+  room={binId:null,apiKey:null,keyType:null};saveRoom();syncItems=[];syncTemplates=[];saveData();
   closeSyncModal();render();
   document.getElementById('setup-overlay').classList.add('open');
   document.body.style.overflow='hidden';
@@ -751,15 +1178,29 @@ async function confirmLeaveRoom(){
 async function resetAllData(){
   const ok=await showConfirm('リストを全件削除','リストと「よく買うもの」をすべて削除します。\nこの操作は元に戻せません。','全削除');
   if(!ok)return;
-  syncItems=[];syncTemplates=[];
   closeSyncModal();
+  // 保留中のpushはキャンセル
+  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
   if(room.binId&&room.apiKey){
-    try{
-      await binPut(room.apiKey,room.binId,[],[]);
-      syncOk=true;lastSyncAt=new Date();setDot('green');
-    }catch(e){syncOk=false;setDot('red');}
+    // lock内で「空にする → PUT」を atomic に実行
+    // これをしないと、lock待ち中のsyncPullがサーバーから旧データを引っ張ってきて復活する
+    await runExclusive(async()=>{
+      syncItems=[];syncTemplates=[];saveData();
+      render();
+      try{
+        await binPut(room.apiKey,room.binId,[],[]);
+        markSyncOk();
+      }catch(e){
+        markSyncError(e);
+        if(e instanceof SyncError && e.fatal) showFatalBanner(e);
+      }
+    });
+  }else{
+    // ローカルのみのクリア
+    syncItems=[];syncTemplates=[];saveData();
+    render();
   }
-  haptic('heavy');render();showToast('🗑️ すべて削除しました');
+  haptic('heavy');showToast('🗑️ すべて削除しました');
 }
 
 // ══════════════════════════════════════
@@ -768,7 +1209,7 @@ async function resetAllData(){
 function openSyncModal(){
   const code=room.binId&&room.apiKey?encodeInvite(room.apiKey,room.binId):'（未設定）';
   document.getElementById('sync-code-display').textContent=code;
-  document.getElementById('sync-status-text').textContent=syncOk?'🟢 同期中':'🔴 オフライン';
+  document.getElementById('sync-status-text').textContent=statusToText(syncState);
   const t=lastSyncAt;
   document.getElementById('sync-last-time').textContent=
     t?`最終同期: ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`:'';
@@ -808,13 +1249,15 @@ function openAddModal(){
   setTimeout(()=>document.getElementById('inp-name').focus(),300);
 }
 function openEditModal(id){
-  const item=syncItems.find(i=>i.id===id);if(!item)return;
-  editId=id;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;currentQty=item.qty;currentUnit=item.unit||'個';
+  const item=syncItems.find(i=>sameId(i.id,id));if(!item)return;
+  editId=id;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;
+  currentQty=Math.min(99,Math.max(1,Number(item.qty)||1));
+  currentUnit=item.unit||'個';
   document.getElementById('modal-title').textContent='商品を編集';
   document.getElementById('inp-name').value=item.name;
   document.getElementById('inp-price').value=item.price||'';
   document.getElementById('inp-note').value=item.note||'';
-  document.getElementById('inp-frequent').checked=syncTemplates.some(t=>t.name===item.name);
+  document.getElementById('inp-frequent').checked=syncTemplates.some(t=>!t.deleted&&t.name===item.name);
   const c=CAT_MAP[currentCat];
   document.getElementById('cat-select-label').textContent=c?`${c.icon} ${c.label}`:'選択してください';
   document.getElementById('cat-select-label').style.color=c?'var(--c-text)':'var(--c-sub)';
@@ -827,27 +1270,62 @@ function openEditModal(id){
 function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';}
 
 // ── ボトムシート下スワイプで閉じる ──
+// 改善点:
+// - input/textarea/selectへのタッチでは発動しない（フォーム操作との競合回避）
+// - 最初の数pxの移動で「下スワイプ」を確定。横方向優位や上方向は無視
+// - modal-body内でスクロール可能な状態なら無効化
 function enableSheetSwipeClose(sheetEl, closeFn){
-  let sy=0, dy=0, active=false;
+  const DIR_THRESHOLD = 10;   // 方向判定に入る移動量
+  const DISMISS_THRESHOLD = 180; // スワイプ閉じを発火する下移動量
+  let sx=0, sy=0, dx=0, dy=0, phase='none'; // none | v(下スワイプ) | ignored
   const bodyEl=sheetEl.querySelector('.modal-body');
+  let activeTouchId=null;
 
   sheetEl.addEventListener('touchstart',e=>{
-    sy=e.touches[0].clientY; dy=0; active=false;
-    // modal-bodyの中でscrollTopが0のときのみ有効化
-    if(!bodyEl||bodyEl.scrollTop===0) active=true;
+    if(e.touches.length>1){phase='ignored';return;}
+    const target=e.target;
+    // フォーム要素から始まったジェスチャーは無視
+    if(target && target.closest && target.closest('input,textarea,select,button')){
+      phase='ignored'; return;
+    }
+    const t=e.touches[0];
+    activeTouchId=t.identifier;
+    sx=t.clientX; sy=t.clientY; dx=0; dy=0;
+    // modal-body内でscrollTop>0ならそもそも無効
+    if(bodyEl && bodyEl.scrollTop>0){phase='ignored';return;}
+    phase='none';
   },{passive:true});
 
   sheetEl.addEventListener('touchmove',e=>{
-    if(!active) return;
-    // modal-body内でscrollTopが上がったら無効化
-    if(bodyEl&&bodyEl.scrollTop>0){ active=false; sheetEl.style.transform=''; return; }
-    dy=e.touches[0].clientY-sy;
-    if(dy>0) sheetEl.style.transform=`translateY(${Math.min(dy,200)}px)`;
+    if(phase==='ignored')return;
+    let t=null;
+    for(const tt of e.touches){if(tt.identifier===activeTouchId){t=tt;break;}}
+    if(!t)return;
+    dx=t.clientX-sx;
+    dy=t.clientY-sy;
+
+    if(phase==='none'){
+      const adx=Math.abs(dx), ady=Math.abs(dy);
+      if(adx<DIR_THRESHOLD && ady<DIR_THRESHOLD) return;
+      // 下方向かつ縦優位
+      if(dy>0 && ady>adx*1.2){
+        // modal-bodyでこれ以上スクロールできない（scrollTop===0）ことを再確認
+        if(bodyEl && bodyEl.scrollTop>0){phase='ignored';return;}
+        phase='v';
+      }else{
+        phase='ignored';
+        return;
+      }
+    }
+
+    if(phase==='v'){
+      if(dy>0) sheetEl.style.transform=`translateY(${Math.min(dy,400)}px)`;
+      else sheetEl.style.transform='';
+    }
   },{passive:true});
 
   sheetEl.addEventListener('touchend',()=>{
-    if(!active){ dy=0; return; }
-    if(dy>220){
+    if(phase==='v' && dy>DISMISS_THRESHOLD){
       sheetEl.style.transition='transform 0.22s ease';
       sheetEl.style.transform='translateY(100%)';
       setTimeout(()=>{ sheetEl.style.transition=''; sheetEl.style.transform=''; closeFn(); },220);
@@ -856,7 +1334,12 @@ function enableSheetSwipeClose(sheetEl, closeFn){
       sheetEl.style.transform='';
       setTimeout(()=>sheetEl.style.transition='',200);
     }
-    dy=0; active=false;
+    dx=0; dy=0; phase='none'; activeTouchId=null;
+  });
+
+  sheetEl.addEventListener('touchcancel',()=>{
+    sheetEl.style.transform='';
+    dx=0; dy=0; phase='none'; activeTouchId=null;
   });
 }
 
@@ -898,6 +1381,23 @@ function pickCat(id){
   closeCatSheet();haptic();
 }
 
+// 価格入力の厳密パース
+// - 空文字・ゴミ・負の値・小数 → 0
+// - 上限99999を超えたら99999にクランプ
+// - 小数は切り捨て
+function parsePrice(raw){
+  const s=String(raw||'').trim();
+  if(!s)return 0;
+  // 数値以外が混入していたら0扱い（"198abc"のような入力を拒否）
+  if(!/^-?\d+(\.\d+)?$/.test(s))return 0;
+  const n=Number(s);
+  if(!Number.isFinite(n))return 0;
+  const floored=Math.floor(n);
+  if(floored<=0)return 0;
+  if(floored>99999)return 99999;
+  return floored;
+}
+
 // ══════════════════════════════════════
 // CRUD
 // ══════════════════════════════════════
@@ -908,24 +1408,32 @@ function submitItem(){
   const now=Date.now();
   const isFrequent=document.getElementById('inp-frequent').checked;
   const patch={name,shop:currentShop,person:currentPerson,category:currentCat||'other',qty:currentQty,unit:currentUnit,
-    price:parseInt(document.getElementById('inp-price').value)||0,
+    price:parsePrice(document.getElementById('inp-price').value),
     note:document.getElementById('inp-note').value.trim(),updatedAt:now};
 
   if(editId){
-    syncItems=syncItems.map(i=>i.id===editId?{...i,...patch}:i);
-    showToast('✏️ 更新しました');
+    const exists = syncItems.some(i=>sameId(i.id,editId) && !i.deleted);
+    if(exists){
+      syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,...patch}:i);
+      showToast('✏️ 更新しました');
+    }else{
+      // 編集中に他デバイスで削除された場合: 新しいIDで復活追加
+      syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,...patch});
+      showToast('✅ 追加しました（削除されていたため新規登録）');
+    }
   }else{
-    syncItems.push({id:now,done:false,deleted:false,createdAt:now,...patch});
+    syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,...patch});
     showToast('✅ 追加しました');
   }
 
   // よく買うもの登録：テンプレートに独立して保存（名前で重複排除）
+  // 既に同名のテンプレートがあれば更新（tombstoneなら復活）。
   if(isFrequent){
     const existing=syncTemplates.find(t=>t.name===name);
     if(existing){
-      syncTemplates=syncTemplates.map(t=>t.name===name?{...t,...patch,id:t.id}:t);
+      syncTemplates=syncTemplates.map(t=>t.name===name?{...t,...patch,id:t.id,deleted:false}:t);
     }else{
-      syncTemplates.push({id:'tmpl-'+now,...patch});
+      syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
     }
   }
 
@@ -933,16 +1441,133 @@ function submitItem(){
 }
 
 async function deleteCurrentItem(){
-  const item=syncItems.find(i=>i.id===editId);
-  const ok=await showConfirm('商品を削除',`「${item?.name}」を削除しますか？`);
+  const item=syncItems.find(i=>sameId(i.id,editId));
+  if(!item || item.deleted){
+    // 既に削除されている/見つからない → モーダル閉じるだけ
+    closeModal();
+    showToast('すでに削除されています');
+    return;
+  }
+  const ok=await showConfirm('商品を削除',`「${item.name}」を削除しますか？`);
   if(!ok)return;
-  syncItems=syncItems.map(i=>i.id===editId?{...i,deleted:true,updatedAt:Date.now()}:i);
+  syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,deleted:true,updatedAt:Date.now()}:i);
   haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
 }
 
 function toggleDone(id){
-  syncItems=syncItems.map(i=>i.id===id?{...i,done:!i.done,updatedAt:Date.now()}:i);
-  haptic();schedulePush();render();
+  const before=syncItems.find(i=>sameId(i.id,id));
+  if(!before || before.deleted)return;
+  // アニメーション中は操作を受け付けない（戻せなくなるバグ対策）
+  const existingCard=document.getElementById(`item-inner-${id}`)?.closest('.item-card');
+  if(existingCard?.dataset.animating==='1')return;
+  const nextDone=!before.done;
+  syncItems=syncItems.map(i=>sameId(i.id,id)?{...i,done:nextDone,updatedAt:Date.now()}:i);
+  haptic();
+  schedulePush();
+
+  const filter=local.filter||'todo';
+  // ── フィルタで消える場合: フェードアウトしてから該当要素だけ削除 ──
+  const willBeHiddenByFilter =
+    (filter==='todo' && nextDone) ||
+    (filter==='done' && !nextDone);
+
+  if(willBeHiddenByFilter){
+    const innerEl=document.getElementById(`item-inner-${id}`);
+    const cardEl=innerEl?.closest('.item-card');
+    if(cardEl){
+      cardEl.dataset.animating='1';  // 連打ロック
+      cardEl.style.transition='opacity 0.2s ease, max-height 0.25s ease, margin 0.25s ease, padding 0.25s ease';
+      cardEl.style.maxHeight=cardEl.offsetHeight+'px';
+      // 次フレームで縮める
+      requestAnimationFrame(()=>{
+        cardEl.style.opacity='0';
+        cardEl.style.maxHeight='0';
+        cardEl.style.marginTop='0';
+        cardEl.style.marginBottom='0';
+        cardEl.style.paddingTop='0';
+        cardEl.style.paddingBottom='0';
+      });
+      setTimeout(()=>{
+        // 該当グループ内の他のアイテムを確認。残り0件ならグループごと再描画
+        const parent=cardEl.parentElement;
+        cardEl.remove();
+        const remainingCards=parent?.querySelectorAll('.item-card').length||0;
+        if(remainingCards===0){
+          // グループが空になった → 再描画でグループヘッダーも消す
+          renderList();
+        }else{
+          // shop-countの更新 & サマリー更新
+          refreshGroupCounts();
+          renderSummary();
+          renderBadge();
+        }
+      },300);
+      return;
+    }
+    // DOM要素が見つからない場合は全再描画にフォールバック
+    render();
+    return;
+  }
+
+  // ── 'all' フィルタ: 該当アイテムのみDOM部分更新 ──
+  applyToggleDoneDOM(id, nextDone);
+  renderSummary();
+  renderBadge();
+}
+
+// 該当アイテムの DOM 表示を done/undone に部分更新
+function applyToggleDoneDOM(id, done){
+  const innerEl=document.getElementById(`item-inner-${id}`);
+  const cardEl=innerEl?.closest('.item-card');
+  if(!cardEl)return;
+  const checkBtn=cardEl.querySelector('.check-btn');
+  if(done){
+    cardEl.classList.add('done');
+    checkBtn?.classList.add('checked');
+    if(checkBtn)checkBtn.textContent='✓';
+  }else{
+    cardEl.classList.remove('done');
+    checkBtn?.classList.remove('checked');
+    if(checkBtn)checkBtn.textContent='';
+  }
+}
+
+// グループヘッダーのカウント・合計金額を syncItems から再計算して書き換え
+function refreshGroupCounts(){
+  const filter=local.filter||'todo';
+  const active=syncItems.filter(i=>!i.deleted);
+  const items = filter==='todo' ? active.filter(i=>!i.done)
+              : filter==='done' ? active.filter(i=>i.done)
+              : active;
+
+  PERSONS.forEach(pg=>{
+    const pgItems=items.filter(i=>(i.person||'both')===pg.id);
+    const pgKey='person-'+pg.id;
+    const head=document.querySelector(`[onclick*="toggleShop('${pgKey}')"]`);
+    if(!head)return;
+    const count=head.querySelector('.shop-count');
+    const priceEl=head.querySelector('.shop-price');
+    if(count)count.textContent=pgItems.length;
+    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+    if(priceEl){
+      if(pgPrice>0){priceEl.textContent='¥'+pgPrice.toLocaleString();priceEl.style.display='';}
+      else priceEl.style.display='none';
+    }
+    SHOPS.forEach(shop=>{
+      const shopItems=pgItems.filter(i=>(i.shop||'super')===shop.id);
+      const shopKey=pgKey+'-'+shop.id;
+      const shead=document.querySelector(`[onclick*="toggleShop('${shopKey}')"]`);
+      if(!shead)return;
+      const scount=shead.querySelector('.shop-count');
+      const spriceEl=shead.querySelector('.shop-price');
+      if(scount)scount.textContent=shopItems.length;
+      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+      if(spriceEl){
+        if(shopPrice>0){spriceEl.textContent='¥'+shopPrice.toLocaleString();spriceEl.style.display='';}
+        else spriceEl.style.display='none';
+      }
+    });
+  });
 }
 
 async function clearDone(){
@@ -954,44 +1579,99 @@ async function clearDone(){
   syncItems=syncItems.map(i=>(!i.deleted&&i.done)?{...i,deleted:true,updatedAt:now}:i);
   haptic('heavy');
   render(); // 即座にUI更新
-  // schedulePushではなく即時同期プッシュ（syncPullによる復活を防ぐ）
-  clearTimeout(pushTimer);
+  // 保留中のpushはキャンセル（lock経由で即PUTするため）
+  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
   if(room.binId&&room.apiKey){
-    try{
-      await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
-      syncOk=true;lastSyncAt=new Date();setDot('green');
-    }catch(e){syncOk=false;setDot('red');}
+    await runExclusive(async()=>{
+      try{
+        await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
+        markSyncOk();
+      }catch(e){
+        markSyncError(e);
+        if(e instanceof SyncError && e.fatal) showFatalBanner(e);
+      }
+    });
   }
   showToast(`🗑️ ${count}件 クリアしました`);
 }
 
 function addFromFrequent(templateId){
-  const src=syncTemplates.find(t=>t.id===templateId);if(!src)return;
+  const src=syncTemplates.find(t=>sameId(t.id,templateId)&&!t.deleted);if(!src)return;
   const now=Date.now();
-  syncItems.push({id:now,done:false,deleted:false,createdAt:now,updatedAt:now,
+  syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,updatedAt:now,
     name:src.name,shop:src.shop||'super',person:src.person||null,category:src.category,
     qty:src.qty,unit:src.unit,price:src.price,note:src.note});
   schedulePush();render();showToast(`✅ ${src.name} を追加しました`);showPage('list');
 }
 
 // Swipe delete
+// スワイプ削除
+// 状態遷移: 'none'(触れたばかり) → 'h'(横スワイプ確定) or 'v'(縦スクロール確定・無視)
+// 判定: 最初の有意な移動(12px以上)で |dx| > |dy| * 1.5 なら横、それ以外は縦
 function enableSwipe(el,id){
-  let sx=0,dx=0,sw=false;
-  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;dx=0;sw=false;},{passive:true});
-  el.addEventListener('touchmove',e=>{
-    dx=e.touches[0].clientX-sx;
-    if(dx<-8)sw=true;
-    if(sw&&dx<0)el.style.transform=`translateX(${Math.max(dx,-80)}px)`;
+  const DIR_THRESHOLD = 12;   // 方向判定に入る移動量
+  const DELETE_THRESHOLD = 65; // 削除発火する横移動量
+  const MAX_PULL = 80;
+  let sx=0, sy=0, dx=0, dy=0, phase='none';
+  let activeTouchId=null;
+
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length>1){phase='v';return;}  // 複数指は無視
+    const t=e.touches[0];
+    activeTouchId=t.identifier;
+    sx=t.clientX; sy=t.clientY; dx=0; dy=0; phase='none';
   },{passive:true});
+
+  el.addEventListener('touchmove',e=>{
+    if(phase==='v')return;  // 縦スクロール確定 → 何もしない
+    // 対象のtouchを見つける（複数指が途中で加わっても元のtouchを追う）
+    let t=null;
+    for(const tt of e.touches){if(tt.identifier===activeTouchId){t=tt;break;}}
+    if(!t)return;
+    dx=t.clientX-sx;
+    dy=t.clientY-sy;
+
+    if(phase==='none'){
+      // 方向判定: 有意な移動があるまでは待つ
+      const adx=Math.abs(dx), ady=Math.abs(dy);
+      if(adx<DIR_THRESHOLD && ady<DIR_THRESHOLD) return;
+      // 左向き かつ 横優位 → 横スワイプ確定
+      if(dx<0 && adx>ady*1.5){
+        phase='h';
+      }else{
+        phase='v';
+        return;
+      }
+    }
+
+    // phase==='h' → カード追従
+    if(dx<0){
+      el.style.transform=`translateX(${Math.max(dx,-MAX_PULL)}px)`;
+    }else{
+      el.style.transform='';
+    }
+  },{passive:true});
+
   el.addEventListener('touchend',async()=>{
-    if(sw&&dx<-65){
-      const item=syncItems.find(i=>i.id===id);
+    if(phase==='h' && dx<-DELETE_THRESHOLD){
+      const item=syncItems.find(i=>sameId(i.id,id));
       const ok=await showConfirm('商品を削除',`「${item?.name}」を削除しますか？`);
-      if(ok){syncItems=syncItems.map(i=>i.id===id?{...i,deleted:true,updatedAt:Date.now()}:i);
-        haptic('heavy');schedulePush();render();showToast('🗑️ 削除しました');}
-      else el.style.transform='';
-    }else el.style.transform='';
-    dx=0;sw=false;
+      if(ok){
+        syncItems=syncItems.map(i=>sameId(i.id,id)?{...i,deleted:true,updatedAt:Date.now()}:i);
+        haptic('heavy');schedulePush();render();showToast('🗑️ 削除しました');
+      }else{
+        el.style.transform='';
+      }
+    }else{
+      el.style.transform='';
+    }
+    dx=0;dy=0;phase='none';activeTouchId=null;
+  });
+
+  // 途中で指が離れずにキャンセルされた場合（システム割り込み等）
+  el.addEventListener('touchcancel',()=>{
+    el.style.transform='';
+    dx=0;dy=0;phase='none';activeTouchId=null;
   });
 }
 
@@ -999,6 +1679,24 @@ function enableSwipe(el,id){
 // Render
 // ══════════════════════════════════════
 function render(){renderList();renderFrequent();renderBadge();}
+
+// サマリーバー（残り/合計/残り予算）だけを軽量更新
+// toggleDone の部分更新時に呼び出す
+function renderSummary(){
+  const active=syncItems.filter(i=>!i.deleted);
+  const todo=active.filter(i=>!i.done).length;
+  const sumPrice=(filter)=>active.filter(filter).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
+  const priceTodo=sumPrice(i=>!i.done&&i.price);
+  const priceAll=sumPrice(i=>i.price);
+  const el=document.getElementById('summary-bar');
+  if(!el)return;
+  el.innerHTML=`
+    <div><div style="font-size:12px;color:var(--c-sub);">残り / 合計</div>
+    <div style="font-size:15px;font-weight:700;">${todo} / ${active.length}点</div></div>
+    ${priceAll>0?`<div style="text-align:right"><div style="font-size:12px;color:var(--c-sub);">残り予算</div>
+    <div style="font-size:15px;font-weight:700;color:var(--c-primary);">¥${priceTodo.toLocaleString()}</div></div>`:''}
+  `;
+}
 
 function renderList(){
   const filter=local.filter||'todo';
@@ -1008,18 +1706,10 @@ function renderList(){
     `<button class="filter-chip tappable ${f.id===filter?'active':''}" onclick="setFilter('${f.id}');haptic()">${f.label}</button>`).join('');
 
   // Summary
-  const active=syncItems.filter(i=>!i.deleted);
-  const todo=active.filter(i=>!i.done).length;
-  const priceTodo=active.filter(i=>!i.done&&i.price).reduce((s,i)=>s+i.price*i.qty,0);
-  const priceAll=active.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
-  document.getElementById('summary-bar').innerHTML=`
-    <div><div style="font-size:12px;color:var(--c-sub);">残り / 合計</div>
-    <div style="font-size:15px;font-weight:700;">${todo} / ${active.length}点</div></div>
-    ${priceAll>0?`<div style="text-align:right"><div style="font-size:12px;color:var(--c-sub);">残り予算</div>
-    <div style="font-size:15px;font-weight:700;color:var(--c-primary);">¥${priceTodo.toLocaleString()}</div></div>`:''}
-  `;
+  renderSummary();
 
   // Filtered items
+  const active=syncItems.filter(i=>!i.deleted);
   let items=[...active];
   if(filter==='todo') items=items.filter(i=>!i.done);
   if(filter==='done') items=items.filter(i=>i.done);
@@ -1046,7 +1736,7 @@ function renderList(){
     if(!pgItems.length)return;
     const pgKey='person-'+(pg.id||'none');
     const pgCollapsed=(local.collapsedShops||[]).includes(pgKey);
-    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
+    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
     html+=`<div class="person-section">
       <div class="person-header tappable ${pgCollapsed?'collapsed':''}" onclick="toggleShop('${pgKey}');haptic()">
         <span class="person-icon">${pg.icon}</span>
@@ -1062,7 +1752,7 @@ function renderList(){
       if(!shopItems.length)return;
       const shopKey=pgKey+'-'+shop.id;
       const shopCollapsed=(local.collapsedShops||[]).includes(shopKey);
-      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+i.price*i.qty,0);
+      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
       html+=`<div class="shop-section" style="margin-left:12px;">
         <div class="shop-header tappable ${shopCollapsed?'collapsed':''}" onclick="toggleShop('${shopKey}');haptic()">
           <span class="shop-icon">${shop.icon}</span>
@@ -1084,20 +1774,24 @@ function renderList(){
 
 function renderItemRow(item){
   const cat=CAT_MAP[item.category]||CAT_MAP['other'];
-  const priceStr=item.price?`<span class="item-price-tag">¥${(item.price*item.qty).toLocaleString()}</span>`:'';
+  const qty=Number(item.qty)||1;
+  const priceN=Number(item.price)||0;
+  const priceStr=priceN>0?`<span class="item-price-tag">¥${(priceN*qty).toLocaleString()}</span>`:'';
   const noteStr=item.note?`<div class="item-note-inline">📝 ${escHtml(item.note)}</div>`:'';
+  const safeId=escHtml(String(item.id));
+  const safeUnit=escHtml(String(item.unit||'個'));
   return `<div class="item-card ${item.done?'done':''}" style="position:relative;">
     <div class="item-delete-bg"><span>🗑️</span></div>
-    <div id="item-inner-${item.id}" style="background:var(--c-bg);border-radius:var(--radius-s);">
+    <div id="item-inner-${safeId}" style="background:var(--c-bg);border-radius:var(--radius-s);">
       <div class="item-row">
-        <button class="check-btn ${item.done?'checked':''}" onclick="toggleDone(${item.id});haptic()">
+        <button class="check-btn ${item.done?'checked':''}" onclick="toggleDone('${safeId}');haptic()">
           ${item.done?'✓':''}</button>
         <span class="item-name">${escHtml(item.name)}</span>
         <div class="item-right">
           <span class="cat-tag">${cat.icon}</span>
-          <span class="item-qty">${item.qty}${item.unit||'個'}</span>
+          <span class="item-qty">${qty}${safeUnit}</span>
           ${priceStr}
-          <button class="tappable" onclick="openEditModal(${item.id})"
+          <button class="tappable" onclick="openEditModal('${safeId}')"
             style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:2px 0 2px 2px;">›</button>
         </div>
       </div>
@@ -1108,34 +1802,40 @@ function renderItemRow(item){
 
 function renderFrequent(){
   const el=document.getElementById('freq-content');
-  if(!syncTemplates.length){
+  const visibleTemplates=syncTemplates.filter(t=>!t.deleted);
+  if(!visibleTemplates.length){
     el.innerHTML=`<div class="empty-state"><div class="empty-icon">⭐</div>
       <div class="empty-title">よく買うものがありません</div>
       <div class="empty-desc">商品追加時に「よく買うものに登録」をオンにすると表示されます</div></div>`;
     return;
   }
-  el.innerHTML=syncTemplates.map(item=>{
+  el.innerHTML=visibleTemplates.map(item=>{
     const shop=SHOP_MAP[item.shop||'super'];
     const cat=CAT_MAP[item.category]||CAT_MAP['other'];
+    const safeId=escHtml(String(item.id));
+    const qty=Number(item.qty)||1;
+    const priceN=Number(item.price)||0;
+    const safeUnit=escHtml(String(item.unit||'個'));
     return `<div class="freq-card">
       <span style="font-size:22px;">${shop.icon}</span>
       <div class="freq-info">
         <div style="font-size:14px;font-weight:600;">${escHtml(item.name)}</div>
         <div style="font-size:12px;color:var(--c-sub);margin-top:2px;">
-          ${shop.label} • ${cat.icon}${cat.label}${item.price?' • ¥'+item.price:''} • ${item.qty}${item.unit||'個'}
+          ${shop.label} • ${cat.icon}${cat.label}${priceN>0?' • ¥'+priceN.toLocaleString():''} • ${qty}${safeUnit}
         </div>
       </div>
-      <button class="tappable" onclick="removeTemplate('${item.id}')"
+      <button class="tappable" onclick="removeTemplate('${safeId}')"
         style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:4px 6px;margin-right:2px;">🗑</button>
-      <button class="freq-add-btn tappable" onclick="addFromFrequent('${item.id}');haptic()">＋</button>
+      <button class="freq-add-btn tappable" onclick="addFromFrequent('${safeId}');haptic()">＋</button>
     </div>`;}).join('');
 }
 
 async function removeTemplate(id){
-  const tmpl=syncTemplates.find(t=>t.id===id);
-  const ok=await showConfirm('よく買うものから削除',`「${tmpl?.name}」を削除しますか？`);
+  const tmpl=syncTemplates.find(t=>sameId(t.id,id)&&!t.deleted);
+  if(!tmpl){renderFrequent();return;}
+  const ok=await showConfirm('よく買うものから削除',`「${tmpl.name}」を削除しますか？`);
   if(!ok)return;
-  syncTemplates=syncTemplates.filter(t=>t.id!==id);
+  syncTemplates=syncTemplates.map(t=>sameId(t.id,id)?{...t,deleted:true,updatedAt:Date.now()}:t);
   haptic('heavy');schedulePush();renderFrequent();showToast('🗑️ 削除しました');
 }
 
@@ -1175,11 +1875,30 @@ function showPage(page){
 enableSheetSwipeClose(document.querySelector('#modal .modal-sheet'),     closeModal);
 enableSheetSwipeClose(document.querySelector('#cat-sheet .modal-sheet'), closeCatSheet);
 enableSheetSwipeClose(document.querySelector('#sync-modal .modal-sheet'),closeSyncModal);
-setDot('');
+// 初期状態: オフラインなら offline、そうでなければ idle
+if(!navigator.onLine){syncState.status='offline';}
+updateSyncUI();
 if(!room.binId||!room.apiKey){
   document.getElementById('setup-overlay').classList.add('open');
   document.body.style.overflow='hidden';
 }else{
+  // keyType未設定=旧Master Key運用のユーザーに警告＆再セットアップ案内
+  if(!room.keyType){
+    setTimeout(async()=>{
+      const ok=await showConfirm(
+        '⚠️ セキュリティ更新のお知らせ',
+        '旧バージョンで発行された招待コードには\nMaster Key（全権限）が含まれていました。\n\nセキュリティ強化のため、Access Key方式に\n移行することを強く推奨します。\n\n「移行する」を押すと一度ログアウトし、\n再セットアップ画面が開きます。\nデータはサーバーに残ります。',
+        '移行する','primary');
+      if(ok){
+        teardownSync();
+        room={binId:null,apiKey:null,keyType:null};saveRoom();
+        syncItems=[];syncTemplates=[];saveData();
+        document.getElementById('setup-overlay').classList.add('open');
+        document.body.style.overflow='hidden';
+        render();
+      }
+    },600);
+  }
   // 旧データ移行チェック（初回ロード時）
   if(migrateFrequentItems()) schedulePush();
   startSync();
