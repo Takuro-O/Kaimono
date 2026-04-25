@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=">
+  <link rel="apple-touch-icon" href="data:image/png;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=">
+  <link rel="manifest" id="pwa-manifest">
+  <meta name="apple-mobile-web-app-title" content="買い物リスト">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>買い物リスト</title>
   <style>
     :root {
@@ -15,6 +20,8 @@
       --shadow-card:0 1px 4px rgba(0,0,0,0.07);
       --shadow-modal:0 -4px 32px rgba(0,0,0,0.12);
       --transition:0.18s ease;
+      /* z-index 一元管理 */
+      --z-header:100;--z-fab:90;--z-modal:200;--z-cat:300;--z-setup:500;--z-confirm:600;--z-toast:999;
       /* iPhone 17 safe areas */
       --sat: env(safe-area-inset-top);
       --sab: env(safe-area-inset-bottom);
@@ -41,7 +48,7 @@
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
     /* ── Header ── */
-    header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.94);
+    header{position:sticky;top:0;z-index:var(--z-header);background:rgba(255,255,255,0.94);
       backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
       border-bottom:1px solid var(--c-border);
       padding:0 12px 0 16px;height:56px;
@@ -58,7 +65,7 @@
       background:rgba(255,255,255,0.96);backdrop-filter:blur(20px) saturate(180%);
       -webkit-backdrop-filter:blur(20px) saturate(180%);
       border-top:1px solid var(--c-border);
-      display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:100;}
+      display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-header);}
     .nav-btn{flex:1;height:54px;display:flex;flex-direction:column;align-items:center;
       justify-content:center;gap:3px;background:none;border:none;
       font-size:10px;font-weight:500;color:var(--c-sub);position:relative;
@@ -129,11 +136,11 @@
 
     #fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:20px;
       width:56px;height:56px;border-radius:50%;background:var(--c-primary);color:#fff;border:none;
-      font-size:28px;box-shadow:0 4px 18px rgba(37,99,235,0.38);z-index:90;
+      font-size:28px;box-shadow:0 4px 18px rgba(37,99,235,0.38);z-index:var(--z-fab);
       display:flex;align-items:center;justify-content:center;}
 
     /* ── Modal / Sheet ── */
-    .modal-overlay{display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center;}
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:flex-end;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,0.45);animation:fadeIn 0.2s ease;}
     .modal-sheet{position:relative;width:100%;max-width:430px;background:var(--c-bg);
@@ -175,7 +182,7 @@
       color:var(--c-primary);font-weight:600;}
 
     /* ── Cat sheet ── */
-    #cat-sheet{display:none;position:fixed;inset:0;z-index:300;align-items:flex-end;justify-content:center;}
+    #cat-sheet{display:none;position:fixed;inset:0;z-index:var(--z-cat);align-items:flex-end;justify-content:center;}
     #cat-sheet.open{display:flex;}
     .cat-option{width:100%;min-height:52px;padding:12px 16px;background:none;border:none;
       border-top:1px solid var(--c-border);font-size:16px;text-align:left;
@@ -192,7 +199,7 @@
       border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
 
     /* ── Confirm ── */
-    #confirm-overlay{display:none;position:fixed;inset:0;z-index:600;
+    #confirm-overlay{display:none;position:fixed;inset:0;z-index:var(--z-confirm);
       align-items:center;justify-content:center;padding:24px;
       background:rgba(0,0,0,0.5);animation:fadeIn 0.15s ease;}
     #confirm-overlay.open{display:flex;}
@@ -211,7 +218,7 @@
     #toast{position:fixed;bottom:calc(82px + env(safe-area-inset-bottom));left:50%;
       transform:translateX(-50%);background:rgba(26,26,26,0.88);color:#fff;
       padding:10px 20px;border-radius:22px;font-size:14px;font-weight:600;
-      z-index:999;pointer-events:none;white-space:nowrap;}
+      z-index:var(--z-toast);pointer-events:none;white-space:nowrap;}
 
     /* ── Badge ── */
     .badge{display:none;position:absolute;top:-4px;right:-6px;min-width:18px;height:18px;
@@ -228,7 +235,7 @@
       align-items:center;justify-content:center;flex-shrink:0;}
 
     /* ── Setup ── */
-    #setup-overlay{display:none;position:fixed;inset:0;z-index:500;background:var(--c-bg);
+    #setup-overlay{display:none;position:fixed;inset:0;z-index:var(--z-setup);background:var(--c-bg);
       overflow-y:auto;padding:0 0 32px;}
     #setup-overlay.open{display:block;}
     .setup-scroll{max-width:400px;margin:0 auto;padding:36px 20px;}
@@ -302,12 +309,12 @@
     </div>
   </main>
 
-  <nav id="bottom-nav">
-    <button class="nav-btn tappable active" data-page="list" onclick="showPage('list')">
+  <nav id="bottom-nav" role="tablist" aria-label="メインナビゲーション">
+    <button class="nav-btn tappable active" data-page="list" onclick="showPage('list')" role="tab" aria-selected="true" aria-label="買い物リスト">
       <span class="nav-icon">🛒<span class="badge" id="badge-list"></span></span>
       <span>リスト</span>
     </button>
-    <button class="nav-btn tappable" data-page="freq" onclick="showPage('freq')">
+    <button class="nav-btn tappable" data-page="freq" onclick="showPage('freq')" role="tab" aria-selected="false" aria-label="よく買うもの">
       <span class="nav-icon">⭐</span>
       <span>よく買うもの</span>
     </button>
@@ -385,8 +392,8 @@
     <div class="modal-body">
 
       <div class="form-mb">
-        <label class="form-label">商品名 *</label>
-        <input class="form-input" id="inp-name" type="text" placeholder="例: 牛乳、トマト…" maxlength="50"
+        <label class="form-label" for="inp-name">商品名 *</label>
+        <input class="form-input" id="inp-name" type="text" required placeholder="例: 牛乳、トマト…" maxlength="50"
           onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('cat-select-btn').focus();openCatSheet();}">
       </div>
 
@@ -422,12 +429,12 @@
       </div>
 
       <div class="form-mb">
-        <label class="form-label">金額（任意）</label>
+        <label class="form-label" for="inp-price">金額（任意）</label>
         <input class="form-input" id="inp-price" type="number" placeholder="例: 198" min="0" max="99999">
       </div>
 
       <div class="form-mb">
-        <label class="form-label">メモ（任意）</label>
+        <label class="form-label" for="inp-note">メモ（任意）</label>
         <input class="form-input" id="inp-note" type="text" placeholder="例: Sサイズ" maxlength="80">
       </div>
 
@@ -614,9 +621,18 @@ try{
   }
 }catch(e){}
 
-const saveLocal = ()=>{ try{localStorage.setItem(LOCAL_KEY,JSON.stringify(local));}catch(e){} };
-const saveRoom  = ()=>{ try{localStorage.setItem(ROOM_KEY,JSON.stringify(room));}catch(e){} };
-const saveData  = ()=>{ try{localStorage.setItem(DATA_KEY,JSON.stringify({items:syncItems,templates:syncTemplates}));}catch(e){} };
+function _lsSet(key, value){
+  try{
+    localStorage.setItem(key, value);
+  }catch(e){
+    if(e?.name==='QuotaExceededError'){
+      showToast('⚠️ 保存容量が上限に達しました');
+    }
+  }
+}
+const saveLocal = ()=> _lsSet(LOCAL_KEY, JSON.stringify(local));
+const saveRoom  = ()=> _lsSet(ROOM_KEY,  JSON.stringify(room));
+const saveData  = ()=> _lsSet(DATA_KEY,  JSON.stringify({items:syncItems, templates:syncTemplates}));
 
 // ══════════════════════════════════════
 // Utils
@@ -859,13 +875,11 @@ function markSyncError(err){
     }[err.status]||'致命的エラー';
     // 致命エラー時は polling を停止（無駄打ち防止）
     if(syncTimer){clearInterval(syncTimer);syncTimer=null;}
-    console.warn('[sync] fatal:', err);
   }else if(err?.status===0 || !navigator.onLine){
     syncState.status='offline';
     // オフラインは想定内なのでlogしない（spam防止）
   }else{
     syncState.status='error';
-    console.warn('[sync]', err);
   }
   updateSyncUI();
 }
@@ -1601,7 +1615,7 @@ function addFromFrequent(templateId){
   syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,updatedAt:now,
     name:src.name,shop:src.shop||'super',person:src.person||null,category:src.category,
     qty:src.qty,unit:src.unit,price:src.price,note:src.note});
-  schedulePush();render();showToast(`✅ ${src.name} を追加しました`);showPage('list');
+  schedulePush();showToast(`✅ ${src.name} を追加しました`);showPage('list');
 }
 
 // Swipe delete
@@ -1678,7 +1692,13 @@ function enableSwipe(el,id){
 // ══════════════════════════════════════
 // Render
 // ══════════════════════════════════════
-function render(){renderList();renderFrequent();renderBadge();}
+function render(){
+  // 表示中のビューのみ再描画（非表示のビューはスキップ）
+  const currentPage = document.querySelector('.page.active')?.id;
+  if(currentPage === 'page-list' || !currentPage) renderList();
+  if(currentPage === 'page-freq') renderFrequent();
+  renderBadge();
+}
 
 // サマリーバー（残り/合計/残り予算）だけを軽量更新
 // toggleDone の部分更新時に呼び出す
@@ -1861,7 +1881,11 @@ function toggleShop(id){
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(`page-${page}`).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    const isActive = b.dataset.page===page;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
   document.getElementById('page-title').textContent={list:'🛒 買い物リスト',freq:'⭐ よく買うもの'}[page]||'';
   document.getElementById('header-clear').style.display=page==='list'?'':'none';
   document.getElementById('fab').style.display=page==='list'?'':'none';
@@ -1904,6 +1928,34 @@ if(!room.binId||!room.apiKey){
   startSync();
 }
 showPage('list');
+</script>
+<script>
+// PWA Manifest（インラインで動的生成）
+const _manifest = {
+  "name": "買い物リスト",
+  "short_name": "買い物",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTAiIGZpbGw9IiMyNTYzZWIiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3Niw2NCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNMjAgMjAgTDc2IDIwIEwxMjQgMjQ0IEwzMDAgMjQ0IEwzNDQgMTAwIEw3NiAxMDAiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxjaXJjbGUgY3g9IjE0NCIgY3k9IjMwOCIgcj0iMzQiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxjaXJjbGUgY3g9IjI4MCIgY3k9IjMwOCIgcj0iMzQiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxwYXRoIGQ9Ik0xNjQgMTY4IEwyMDAgMjA0IEwyNjggMTMyIiBzdHJva2Utd2lkdGg9IjI4IiBzdHJva2U9IiNmZmZmZmYiLz4KICA8L2c+Cjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+};
+const _blob = new Blob([JSON.stringify(_manifest)], {type:'application/json'});
+const _url = URL.createObjectURL(_blob);
+document.getElementById('pwa-manifest').setAttribute('href', _url);
 </script>
 </body>
 </html>
