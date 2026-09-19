@@ -45,8 +45,9 @@
     body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
       background:var(--c-bg);color:var(--c-text);font-size:16px;line-height:1.5;
       -webkit-text-size-adjust:100%;overscroll-behavior:none;}
-    #app{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+    #app{max-width:430px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
     button{font-family:inherit;cursor:pointer;touch-action:manipulation;}
+    button:disabled{opacity:0.55;cursor:not-allowed;}
     input,textarea,select{font-family:inherit;font-size:16px;}
     /* タップ領域を最低44pxに（iOS HIG準拠） */
     .tappable{transition:transform var(--transition),opacity var(--transition);
@@ -168,7 +169,7 @@
     .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,0.45);animation:fadeIn 0.2s ease;}
     .modal-sheet{position:relative;width:100%;max-width:430px;background:var(--c-bg);
       border-radius:var(--radius-l) var(--radius-l) 0 0;
-      max-height:92dvh;overflow:hidden;display:flex;flex-direction:column;
+      max-height:92vh;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column;
       box-shadow:var(--shadow-modal);animation:slideUp 0.28s cubic-bezier(.32,.72,0,1);}
     .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;
       padding:20px 16px 8px;flex:1;}
@@ -618,12 +619,20 @@ function clampStr(v, max){
   const m=max||MAX_STR;
   return v.length>m?v.slice(0,m):v;
 }
+// idは内部生成（newId()）のみを想定：英数字・ハイフン・アンダースコアのみ許可。
+// idは画面描画時にonclick属性の中の文字列リテラルとして埋め込まれるため、
+// ここで文字種を絞らないと不正なidが混入した際にスクリプトインジェクションの
+// 糸口になり得る（例: 共有Binへ直接APIで不正なJSONを書き込まれた場合）。
+function sanitizeId(v){
+  const s=clampStr(String(v||''),100);
+  return /^[A-Za-z0-9_-]+$/.test(s) ? s : '';
+}
 function sanitizeItems(raw){
   if(!Array.isArray(raw))return [];
   return raw.map(r=>{
     if(!r||typeof r!=='object')return null;
     return {
-      id: clampStr(String(r.id||''), 100),
+      id: sanitizeId(r.id),
       name: clampStr(r.name, 80),
       note: clampStr(r.note, 200),
       category: clampStr(r.category, 30),
@@ -764,7 +773,12 @@ async function binCreateWithMasterKey(masterKey,data){
     headers:{'Content-Type':'application/json','X-Master-Key':masterKey,'X-Bin-Name':'shopping-list','X-Bin-Private':'true'},
     body:JSON.stringify({items:data,templates:[]})});
   if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`${r.status}: ${t}`);}
-  const j=await r.json();
+  let j;
+  try{
+    j=await r.json();
+  }catch(e){
+    throw new Error('サーバーからの応答が不正な形式でした: '+e.message);
+  }
   return j.metadata?.id||j.id;
 }
 // Access Key発行（Bins Read + Update のみ、Create/Deleteは付与しない）
@@ -789,7 +803,12 @@ async function createAccessKey(masterKey){
     }
     throw new Error(`AccessKey ${r.status}: ${t}`);
   }
-  const j=await r.json();
+  let j;
+  try{
+    j=await r.json();
+  }catch(e){
+    throw new Error('サーバーからの応答が不正な形式でした: '+e.message);
+  }
   if(!j.accessKey) throw new Error('Access Keyの取得に失敗しました');
   return j.accessKey;
 }
@@ -819,7 +838,12 @@ async function binGet(accessKey,binId){
     const body=await r.text().catch(()=>'');
     throw new SyncError(`GET ${r.status}: ${body.slice(0,200)}`, r.status, isFatalStatus(r.status));
   }
-  const j=await r.json();
+  let j;
+  try{
+    j=await r.json();
+  }catch(e){
+    throw new SyncError('サーバーからの応答が不正な形式でした: '+e.message, r.status, false);
+  }
   const rec=j.record||j;
   return {items:sanitizeItems(rec.items), templates:sanitizeItems(rec.templates)};
 }
@@ -951,6 +975,27 @@ function reauthOpen(){
   document.body.style.overflow='hidden';
   render();
 }
+
+// ── 同一端末での複数タブ対策 ──
+// 別タブでの変更（storage イベント）を検知して取り込む。
+// DATA_KEY: 既存のLWWマージ関数を再利用し、このタブの未反映の変更を失わずに反映
+// ROOM_KEY: 部屋の作成/参加/切り替えは同期エンジンの再構築が必要なため、安全のためリロードする
+window.addEventListener('storage', e=>{
+  if(e.key===DATA_KEY && e.newValue){
+    try{
+      const parsed=JSON.parse(e.newValue);
+      const otherItems=sanitizeItems(parsed?.items);
+      const otherTemplates=sanitizeItems(parsed?.templates);
+      syncItems=mergeItems(syncItems, otherItems);
+      syncTemplates=mergeTemplates(syncTemplates, otherTemplates);
+      saveData();
+      render();
+    }catch(err){/* 壊れたデータは無視 */}
+  }else if(e.key===ROOM_KEY){
+    // 部屋が変わると同期先が変わるため、その場でstateを継ぎ足すのではなく安全にリロードする
+    location.reload();
+  }
+});
 
 // ネットワーク状態の監視（オフライン→オンライン復帰時に自動再同期）
 window.addEventListener('online', ()=>{
@@ -1287,9 +1332,11 @@ function shareInviteCode(){
 // Add/Edit modal
 // ══════════════════════════════════════
 let editId=null, editTemplateId=null, currentCat=null, currentShop='super', currentPerson=null, currentQty=1, currentUnit='個';
+// モーダルの追加/編集/削除ボタン連打による二重実行防止フラグ
+let modalBusy=false;
 
 function openAddModal(){
-  editId=null;editTemplateId=null;currentCat=null;currentShop='super';currentPerson='both';currentQty=1;currentUnit='個';
+  editId=null;editTemplateId=null;modalBusy=false;currentCat=null;currentShop='super';currentPerson='both';currentQty=1;currentUnit='個';
   document.getElementById('modal-title').textContent='商品を追加';
   ['inp-name','inp-price','inp-note'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('inp-frequent').checked=false;
@@ -1305,7 +1352,7 @@ function openAddModal(){
 }
 function openEditModal(id){
   const item=syncItems.find(i=>sameId(i.id,id));if(!item)return;
-  editId=id;editTemplateId=null;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;
+  editId=id;editTemplateId=null;modalBusy=false;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;
   currentQty=Math.min(99,Math.max(1,Number(item.qty)||1));
   currentUnit=item.unit||'個';
   document.getElementById('modal-title').textContent='商品を編集';
@@ -1326,7 +1373,7 @@ function openEditModal(id){
 // 「よく買うもの」を直接編集する（アイテムを経由せずテンプレートを書き換える）
 function openEditTemplateModal(id){
   const tmpl=syncTemplates.find(t=>sameId(t.id,id)&&!t.deleted);if(!tmpl)return;
-  editId=null;editTemplateId=id;currentCat=tmpl.category;currentShop=tmpl.shop||'super';currentPerson=tmpl.person||null;
+  editId=null;editTemplateId=id;modalBusy=false;currentCat=tmpl.category;currentShop=tmpl.shop||'super';currentPerson=tmpl.person||null;
   currentQty=Math.min(99,Math.max(1,Number(tmpl.qty)||1));
   currentUnit=tmpl.unit||'個';
   document.getElementById('modal-title').textContent='よく買うものを編集';
@@ -1482,16 +1529,27 @@ function parsePrice(raw){
 // ══════════════════════════════════════
 // 重複チェック付きで新規アイテムを追加する共通処理。
 // 「未購入」の同名アイテムが既にあれば、数量をまとめるか別に追加するか確認する。
+// 商品名の比較は表記ゆれ対策で大文字小文字を区別しない。
 async function addItemWithDupCheck(patch){
-  const dup=syncItems.find(i=>!i.deleted&&!i.done&&i.name===patch.name);
+  const nameLower=patch.name.toLowerCase();
+  const dup=syncItems.find(i=>!i.deleted&&!i.done&&i.name.toLowerCase()===nameLower);
   if(dup){
     const ok=await showConfirm('すでにリストにあります',
       `「${patch.name}」は未購入のリストに既にあります。\n数量をまとめますか？`,
       '数量をまとめる','primary');
     if(ok){
-      const mergedQty=Math.min(99999,(Number(dup.qty)||1)+(Number(patch.qty)||1));
+      // 確認待ちの間に他端末の同期で状態が変わっている可能性があるため、最新の値を取り直す
+      const latest=syncItems.find(i=>sameId(i.id,dup.id));
+      if(!latest || latest.deleted){
+        // 確認中に削除されていた場合は通常どおり新規追加にフォールバック
+        const id=newId('itm-');
+        syncItems.push({id,done:false,deleted:false,createdAt:Date.now(),...patch});
+        showToast(`✅ ${patch.name} を追加しました`);
+        return id;
+      }
+      const mergedQty=Math.min(99999,(Number(latest.qty)||1)+(Number(patch.qty)||1));
       syncItems=syncItems.map(i=>sameId(i.id,dup.id)?{...i,qty:mergedQty,updatedAt:Date.now()}:i);
-      showToast(`🔗 数量を ${mergedQty}${dup.unit||patch.unit||'個'} にまとめました`);
+      showToast(`🔗 数量を ${mergedQty}${latest.unit||patch.unit||'個'} にまとめました`);
       return dup.id;
     }
   }
@@ -1502,83 +1560,109 @@ async function addItemWithDupCheck(patch){
 }
 
 async function submitItem(){
+  if(modalBusy)return; // 連打による二重実行を防止
   const name=document.getElementById('inp-name').value.trim();
   if(!name){const i=document.getElementById('inp-name');i.style.borderColor='var(--c-danger)';i.focus();return;}
   document.getElementById('inp-name').style.borderColor='var(--c-border)';
-  const now=Date.now();
-  const isFrequent=document.getElementById('inp-frequent').checked;
-  const patch={name,shop:currentShop,person:currentPerson,category:currentCat||'other',qty:currentQty,unit:currentUnit,
-    price:parsePrice(document.getElementById('inp-price').value),
-    note:document.getElementById('inp-note').value.trim(),updatedAt:now};
+  modalBusy=true;
+  const submitBtn=document.getElementById('modal-submit');
+  if(submitBtn)submitBtn.disabled=true;
+  try{
+    const now=Date.now();
+    const isFrequent=document.getElementById('inp-frequent').checked;
+    const patch={name,shop:currentShop,person:currentPerson,category:currentCat||'other',qty:currentQty,unit:currentUnit,
+      price:parsePrice(document.getElementById('inp-price').value),
+      note:document.getElementById('inp-note').value.trim(),updatedAt:now};
 
-  // 「よく買うもの」を直接編集している場合はテンプレートだけを更新して終了
-  if(editTemplateId){
-    const exists=syncTemplates.some(t=>sameId(t.id,editTemplateId)&&!t.deleted);
-    if(exists){
-      syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,...patch,deleted:false}:t);
-      showToast('✏️ 更新しました');
-    }else{
-      // 編集中に他デバイスで削除された場合: 新しいIDで復活登録
-      syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
-      showToast('✅ 登録しました（削除されていたため新規登録）');
+    // 「よく買うもの」を直接編集している場合はテンプレートだけを更新して終了
+    if(editTemplateId){
+      // 他の（自分以外の）テンプレートと同名にならないようチェック
+      const nameLower=name.toLowerCase();
+      const dupTmpl=syncTemplates.find(t=>!t.deleted && !sameId(t.id,editTemplateId) && t.name.toLowerCase()===nameLower);
+      if(dupTmpl){
+        showToast(`⚠️ 「${name}」は既に登録されています`);
+        return;
+      }
+      const exists=syncTemplates.some(t=>sameId(t.id,editTemplateId)&&!t.deleted);
+      if(exists){
+        syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,...patch,deleted:false}:t);
+        showToast('✏️ 更新しました');
+      }else{
+        // 編集中に他デバイスで削除された場合: 新しいIDで復活登録
+        syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
+        showToast('✅ 登録しました（削除されていたため新規登録）');
+      }
+      haptic();schedulePush();closeModal();render();
+      return;
     }
+
+    if(editId){
+      const exists = syncItems.some(i=>sameId(i.id,editId) && !i.deleted);
+      if(exists){
+        syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,...patch}:i);
+        showToast('✏️ 更新しました');
+      }else{
+        // 編集中に他デバイスで削除された場合: 新しいIDで復活追加
+        syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,...patch});
+        showToast('✅ 追加しました（削除されていたため新規登録）');
+      }
+    }else{
+      await addItemWithDupCheck(patch);
+    }
+
+    // よく買うもの登録：テンプレートに独立して保存（名前で重複排除、大文字小文字は区別しない）
+    // 既に同名のテンプレートがあれば更新（tombstoneなら復活）。
+    if(isFrequent){
+      const nameLower=name.toLowerCase();
+      const existing=syncTemplates.find(t=>t.name.toLowerCase()===nameLower);
+      if(existing){
+        syncTemplates=syncTemplates.map(t=>t.id===existing.id?{...t,...patch,id:t.id,deleted:false}:t);
+      }else{
+        syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
+      }
+    }
+
     haptic();schedulePush();closeModal();render();
-    return;
+  }finally{
+    modalBusy=false;
+    if(submitBtn)submitBtn.disabled=false;
   }
-
-  if(editId){
-    const exists = syncItems.some(i=>sameId(i.id,editId) && !i.deleted);
-    if(exists){
-      syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,...patch}:i);
-      showToast('✏️ 更新しました');
-    }else{
-      // 編集中に他デバイスで削除された場合: 新しいIDで復活追加
-      syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,...patch});
-      showToast('✅ 追加しました（削除されていたため新規登録）');
-    }
-  }else{
-    await addItemWithDupCheck(patch);
-  }
-
-  // よく買うもの登録：テンプレートに独立して保存（名前で重複排除）
-  // 既に同名のテンプレートがあれば更新（tombstoneなら復活）。
-  if(isFrequent){
-    const existing=syncTemplates.find(t=>t.name===name);
-    if(existing){
-      syncTemplates=syncTemplates.map(t=>t.name===name?{...t,...patch,id:t.id,deleted:false}:t);
-    }else{
-      syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
-    }
-  }
-
-  haptic();schedulePush();closeModal();render();
 }
 
 async function deleteCurrentItem(){
-  if(editTemplateId){
-    const tmpl=syncTemplates.find(t=>sameId(t.id,editTemplateId));
-    if(!tmpl || tmpl.deleted){
+  if(modalBusy)return; // 連打による二重実行を防止
+  modalBusy=true;
+  const delBtn=document.getElementById('modal-delete');
+  if(delBtn)delBtn.disabled=true;
+  try{
+    if(editTemplateId){
+      const tmpl=syncTemplates.find(t=>sameId(t.id,editTemplateId));
+      if(!tmpl || tmpl.deleted){
+        closeModal();
+        showToast('すでに削除されています');
+        return;
+      }
+      const ok=await showConfirm('よく買うものから削除',`「${tmpl.name}」を削除しますか？`);
+      if(!ok)return;
+      syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,deleted:true,updatedAt:Date.now()}:t);
+      haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
+      return;
+    }
+    const item=syncItems.find(i=>sameId(i.id,editId));
+    if(!item || item.deleted){
+      // 既に削除されている/見つからない → モーダル閉じるだけ
       closeModal();
       showToast('すでに削除されています');
       return;
     }
-    const ok=await showConfirm('よく買うものから削除',`「${tmpl.name}」を削除しますか？`);
+    const ok=await showConfirm('商品を削除',`「${item.name}」を削除しますか？`);
     if(!ok)return;
-    syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,deleted:true,updatedAt:Date.now()}:t);
+    syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,deleted:true,updatedAt:Date.now()}:i);
     haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
-    return;
+  }finally{
+    modalBusy=false;
+    if(delBtn)delBtn.disabled=false;
   }
-  const item=syncItems.find(i=>sameId(i.id,editId));
-  if(!item || item.deleted){
-    // 既に削除されている/見つからない → モーダル閉じるだけ
-    closeModal();
-    showToast('すでに削除されています');
-    return;
-  }
-  const ok=await showConfirm('商品を削除',`「${item.name}」を削除しますか？`);
-  if(!ok)return;
-  syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,deleted:true,updatedAt:Date.now()}:i);
-  haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
 }
 
 function toggleDone(id){
@@ -1832,7 +1916,9 @@ function renderSummary(){
 }
 
 function renderList(){
-  const filter=local.filter||'todo';
+  // 壊れたlocalStorage等で想定外の値が入っていてもクラッシュしないよう検証
+  const validFilterIds=FILTERS.map(f=>f.id);
+  const filter=validFilterIds.includes(local.filter)?local.filter:'todo';
 
   // Filter chips
   document.getElementById('filter-bar').innerHTML=FILTERS.map(f=>
