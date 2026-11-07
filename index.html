@@ -200,6 +200,32 @@ S.items.forEach(i=>{if(i.who){i.memo=[i.who,i.memo].filter(Boolean).join(' ・ '
 const vis=()=>S.items.filter(i=>!i.del);
 S.items.forEach(i=>{const f=fixShop(i.cat,i.memo);if(f.cat!==i.cat||f.memo!==(i.memo||'')){i.cat=f.cat;i.memo=f.memo;i.t=Math.max(Date.now(),i.t+1)}});
 S.hist.forEach(h=>{h.cat=fixShop(h.cat,'').cat});
+/* 一回だけのお掃除: 買う場所が「セリア」の商品から「セリア」の文字を、メモから「ゆか」を消す。
+   単独で書かれたものだけを対象にし（「セリア」「（セリア）」「ゆか ・ 特売」など）、「ゆかの薬」のような文中の語は触らない */
+function stripToken(t,w){
+  const sep='[\\s（(【\\[・、,:：]',end='[\\s）)】\\]・、,:：]';
+  return String(t||'').replace(new RegExp(`(^|${sep})${w}(?=$|${end})`,'g'),'$1')
+    .replace(/[（(【\[]\s*[）)】\]]/g,'')
+    .replace(/(\s*・\s*){2,}/g,' ・ ').replace(/^[\s・、,:：]+|[\s・、,:：]+$/g,'').replace(/\s{2,}/g,' ').trim();
+}
+let cleanedN=0;
+(function(){
+  const FLAG='kaimono2_cleanup_v1';
+  try{if(localStorage.getItem(FLAG)) return}catch{}
+  S.items.forEach(i=>{
+    let name=i.name,memo=i.memo||'';
+    if(i.cat==='セリア'){const nn=stripToken(name,'セリア');if(nn)name=nn;memo=stripToken(memo,'セリア')}
+    memo=stripToken(memo,'ゆか');
+    if(name!==i.name||memo!==(i.memo||'')){i.name=name;i.memo=memo;i.t=Math.max(Date.now(),i.t+1);cleanedN++}
+  });
+  const seenH={};
+  S.hist=S.hist.filter(h=>{
+    if(h.cat==='セリア'){const nn=stripToken(h.name,'セリア');if(nn)h.name=nn}
+    const k=h.name+'|'+h.cat; if(seenH[k]){seenH[k].n+=h.n;seenH[k].pin=seenH[k].pin||h.pin;return false} seenH[k]=h;return true;
+  });
+  try{localStorage.setItem(FLAG,'1')}catch{}
+  if(cleanedN) save();
+})();
 const SHK='kaimono2_shops',SELK='kaimono2_shop';
 let customShops=(()=>{try{const a=JSON.parse(localStorage.getItem(SHK));return Array.isArray(a)?a.map(x=>String(x).slice(0,12)):[]}catch{return[]}})();
 const saveShops=()=>{try{localStorage.setItem(SHK,JSON.stringify(customShops))}catch{}};
@@ -702,7 +728,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
    同じURLで動いていた旧版が端末に残したデータ（と、あれば JSONBin の最新データ）を取り込む。
    id は 'o_'+旧id で固定なので、何度実行しても重複しない。 */
 const MK='kaimono2_migrated';
-const OLD_WHO={takuro:'たくろう',yuka:'ゆか'};
+const OLD_WHO={takuro:'たくろう'};
 const OLD_SHOP={super:'スーパー',amazon:'Amazon',other:'その他'};
 function importOld(items,templates){
   let n=0;
@@ -758,6 +784,7 @@ applyAwake(false);
 syncStart();
 migrateOld();
 checkIncoming();
+if(cleanedN) toast(`${cleanedN}件の表記を整えた`);
 </script>
 </body>
 </html>
