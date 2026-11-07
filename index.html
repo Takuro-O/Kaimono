@@ -63,7 +63,6 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 .nm .q{font-size:13px;font-weight:700;color:var(--c-primary);flex:none}
 .sub{font-size:12px;color:var(--c-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .done .nm,.done .sub{color:#b4b9c0;text-decoration:line-through}
-.pr{flex:none;font-size:13px;color:var(--c-sub)}
 
 .empty{text-align:center;padding:56px 24px;color:var(--c-sub)}
 .empty .em{font-size:48px;margin-bottom:12px}
@@ -176,13 +175,12 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 /* 各商品は更新時刻 t を持ち、削除は del:true（墓標）で表す。同期はこの t が新しい方を採用する */
 S.items.forEach(i=>{i.t=+i.t||0;i.del=!!i.del});
 S.items=S.items.filter(i=>!(i.del&&i.t<Date.now()-30*864e5));
-S.items.forEach(i=>{if(i.who){i.memo=[i.who,i.memo].filter(Boolean).join(' ・ ').slice(0,100);delete i.who;i.t=Math.max(Date.now(),i.t+1)}else delete i.who});
+S.items.forEach(i=>{if(i.who){i.memo=[i.who,i.memo].filter(Boolean).join(' ・ ').slice(0,100);delete i.who;i.t=Math.max(Date.now(),i.t+1)}else delete i.who;delete i.price});
 const vis=()=>S.items.filter(i=>!i.del);
 const touch=i=>{i.t=Math.max(Date.now(),(i.t||0)+1);markDirty(i.id);return i};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const haptic=(t='light')=>navigator.vibrate?.(t==='heavy'?30:10);
-const yen=n=>'¥'+Number(n).toLocaleString('ja-JP');
 const norm=s=>s.trim().replace(/\s+/g,' ');
 
 let tab='list';
@@ -207,7 +205,7 @@ function addItem(name,qty=1,cat,extra={}){
   const ex=vis().find(i=>!i.done&&i.name===name);
   if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} の数量を ${ex.qty} にしました`);return true}
   cat=cat||guessCat(name);
-  S.items.push(touch({id:uid(),name,cat,qty,price:'',memo:'',done:false,del:false,t:0,...extra}));
+  S.items.push(touch({id:uid(),name,cat,qty,memo:'',done:false,del:false,t:0,...extra}));
   bumpHist(name,cat);save();render();return true;
 }
 
@@ -231,20 +229,17 @@ function renderSugg(){
 }
 function rowHtml(i){
   const sub=i.memo||'';
-  const price=i.price!==''&&i.price!=null?yen(i.price*i.qty):'';
   return `<div class="rw" data-id="${i.id}"><div class="del">🗑</div>
     <div class="row ${i.done?'done':''}">
       <button class="chk tappable" data-chk="${i.id}" aria-label="購入済みにする">${i.done?'✓':''}</button>
       <button class="body tappable" data-edit="${i.id}"><div class="nm">${esc(i.name)}${i.qty>1?`<span class="q">×${i.qty}</span>`:''}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</button>
-      ${price?`<span class="pr">${price}</span>`:''}
     </div></div>`;
 }
 function listView(){
   const all=vis(), todo=all.filter(i=>!i.done), done=all.filter(i=>i.done);
   if(!all.length) return `<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の入力欄に商品名を入れて追加しましょう<br>数量は「牛乳 2」のように書けます</p></div>`;
-  const total=all.reduce((s,i)=>s+(i.price!==''&&i.price!=null?i.price*i.qty:0),0);
   const pct=Math.round(done.length/all.length*100);
-  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 購入済み</span><span>${total?'合計 '+yen(total):''}</span></div></div>`;
+  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 購入済み</span><span></span></div></div>`;
   if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
   CATS.forEach(c=>{
     const its=todo.filter(i=>i.cat===c.id); if(!its.length) return;
@@ -309,7 +304,6 @@ function openEdit(id){
     <div class="fld"><label>商品名</label><input id="eName" value="${esc(i.name)}"></div>
     <div class="fld"><label>数量</label><div class="stp"><button class="tappable" data-q="-1">−</button><span id="eQty">${i.qty}</span><button class="tappable" data-q="1">＋</button></div></div>
     <div class="fld"><label>売り場</label><div class="cats">${CATS.map(c=>`<button class="tappable ${c.id===i.cat?'on':''}" data-cat="${c.id}">${c.e} ${c.n}</button>`).join('')}</div></div>
-    <div class="fld"><label>単価（任意）</label><input id="ePrice" type="number" inputmode="numeric" min="0" value="${i.price}" placeholder="円"></div>
     <div class="fld"><label>メモ（任意）</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
     <button class="btn p tappable" data-save>保存</button>
     <button class="btn g tappable" data-del>削除</button>`;
@@ -320,9 +314,8 @@ function openEdit(id){
     else if(e.target.closest('[data-save]')){
       const nm=norm($('#eName').value);
       if(!nm){$('#eName').style.borderColor='var(--c-danger)';return}
-      const p=$('#ePrice').value;
       const tgt=S.items.find(x=>x.id===id);
-      if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,price:p===''?'':Math.max(0,+p),memo:norm($('#eMemo').value)});touch(tgt)}
+      if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,memo:norm($('#eMemo').value)});touch(tgt)}
       const h=S.hist.find(x=>x.name===nm);if(h)h.cat=editing.cat;
       save();render();closeAll();haptic();toast('保存しました');
     }
@@ -369,11 +362,10 @@ async function openMsg(s){
   const all=unb64(s);
   return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(0,12)},aesKey,all.slice(12))));
 }
-const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,price:i.price,memo:i.memo,done:!!i.done,del:!!i.del,t:i.t});
+const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,memo:i.memo,done:!!i.done,del:!!i.del,t:i.t});
 function clean(r){
-  const price=r.price===''||r.price==null?'':Math.max(0,+r.price||0);
   return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:CATS.some(c=>c.id===r.cat)?r.cat:'other',
-    qty:Math.min(99,Math.max(1,+r.qty||1)),price,memo:[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ ').slice(0,100),
+    qty:Math.min(99,Math.max(1,+r.qty||1)),memo:[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ ').slice(0,100),
     done:!!r.done,del:!!r.del,t:+r.t||0};
 }
 const newer=(a,b)=>a.t>b.t||(a.t===b.t&&JSON.stringify(a)>JSON.stringify(b));
@@ -540,7 +532,6 @@ function checkIncoming(){
 function openMenu(){
   $('#sheetMenu').innerHTML=`<div class="grab"></div>
     <button class="mrow tappable" data-m="clearDone"><span>✓</span><span>購入済みをまとめて消す</span></button>
-    <button class="mrow tappable" data-m="uncheck"><span>↩︎</span><span>購入済みをリストに戻す</span></button>
     <button class="mrow tappable" data-m="reimport"><span>📥</span><span>旧版のデータを取り込む</span></button>
     <button class="mrow tappable" data-m="clearAll" style="color:var(--c-danger)"><span>🗑</span><span>リストを全件削除</span></button>
     <button class="btn g tappable" data-close2>閉じる</button>`;
@@ -550,7 +541,6 @@ function openMenu(){
     closeAll();
     if(m==='clearDone') doClearDone();
     if(m==='reimport') migrateOld(true);
-    if(m==='uncheck'){vis().filter(i=>i.done).forEach(i=>{i.done=false;touch(i)});save();render();toast('リストに戻しました')}
     if(m==='clearAll') confirmSheet({title:'リストを全件削除しますか？',msg:'同期中の場合は、共有している全員のリストからも消えます。',label:'削除する',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
   };
   open('#ovMenu');
@@ -613,7 +603,7 @@ function importOld(items,templates){
     const plain=!unit||unit==='個';
     const memo=[OLD_WHO[o.person]||'',OLD_SHOP[o.shop]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
     const cat=OLD_CAT[o.category]||'other';
-    S.items.push(touch({id,name,cat,qty:plain?Math.min(99,Math.max(1,q)):1,price:+o.price>0?Math.min(99999,+o.price):'',
+    S.items.push(touch({id,name,cat,qty:plain?Math.min(99,Math.max(1,q)):1,
       memo,done:!!o.done,del:false,t:0}));
     if(!S.hist.some(h=>h.name===name)) S.hist.push({id:uid(),name,cat,n:1,pin:false});
     n++;
