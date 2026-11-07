@@ -42,7 +42,10 @@ header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdr
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;height:32px;padding:0 12px;border:1px solid var(--c-border);background:#fff;border-radius:16px;font-size:14px;white-space:nowrap}
 .chip.sel{background:var(--c-primary);border-color:var(--c-primary);color:#fff;font-weight:700}
-.chips .lbl{flex:none;align-self:center;font-size:12px;color:var(--c-sub);margin-right:-2px}
+#chipsArea{padding:10px 16px 0}
+#shopSel{flex-wrap:wrap;gap:6px;overflow:visible;padding:0 0 10px}
+#shopSel .chip{flex:1 1 auto;height:34px;padding:0 6px;font-size:13px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+#sugg{flex-wrap:wrap;overflow:visible;gap:6px}
 .chip b{color:var(--c-primary);margin-right:2px}
 
 .seg{display:flex;background:var(--c-surface);border-radius:var(--radius-s);padding:3px;margin:0 16px 12px}
@@ -144,12 +147,15 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
         <input id="addInput" type="text" placeholder="買うもの（例：牛乳 2）" enterkeyhint="done" aria-label="商品名">
         <button type="submit" class="tappable">追加</button>
       </form>
-      <div class="chips" id="shopSel"></div>
-      <div class="chips" id="sugg"></div>
     </div>
   </header>
 
-  <div class="seg" style="margin-top:12px">
+  <div id="chipsArea">
+    <div class="chips" id="shopSel"></div>
+    <div class="chips" id="sugg"></div>
+  </div>
+
+  <div class="seg">
     <button class="tappable active" data-tab="list">🛒 リスト</button>
     <button class="tappable" data-tab="fav">⭐ よく買うもの</button>
   </div>
@@ -240,14 +246,14 @@ function render(){
   renderShopSel();
   renderSugg();
   document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  $('#addArea').style.display=tab==='list'?'block':'none';
+  $('#addArea').style.display=$('#chipsArea').style.display=tab==='list'?'block':'none';
   $('#main').innerHTML=tab==='list'?listView():favView();
   bindRows();
 }
 function renderShopSel(){
   if(!shopList().includes(selShop)) selShop='スーパー';
-  $('#shopSel').innerHTML='<span class="lbl">追加先</span><button type="button" class="chip tappable" data-shopmgr aria-label="場所を追加・整理">＋</button>'+shopList().map(n=>`<button type="button" class="chip tappable ${n===selShop?'sel':''}" data-shop="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('');
-  $('#shopSel').querySelector('.sel')?.scrollIntoView?.({inline:'nearest',block:'nearest'});
+  $('#shopSel').innerHTML=shopList().map(n=>`<button type="button" class="chip tappable ${n===selShop?'sel':''}" data-shop="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('')+'<button type="button" class="chip tappable" data-shopmgr aria-label="場所を追加・整理">＋</button>';
+  $('#addInput').placeholder=`${selShop}に追加（例：牛乳 2）`;
 }
 function openShopMgr(){
   const sh=$('#sheetConfirm');
@@ -273,7 +279,7 @@ function renderSugg(){
   let src=S.hist.filter(h=>!inList.has(h.name));
   if(q){const {name}=parseInput(q);src=src.filter(h=>h.name.includes(name)&&h.name!==name)}
   src.sort((a,b)=>(b.pin-a.pin)||(b.n-a.n));
-  src=src.slice(0,12);
+  src=src.slice(0,8);
   $('#sugg').innerHTML=src.map(h=>`<button type="button" class="chip tappable" data-hid="${h.id}"><b>＋</b>${esc(h.name)}</button>`).join('');
   $('#sugg').style.display=src.length?'flex':'none';
 }
