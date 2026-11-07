@@ -6,6 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="買い物リスト">
 <meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>買い物リスト</title>
 <style>
 :root{
@@ -109,6 +113,12 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 .dot.on{background:#22c55e}
 .dot.connecting{background:#f59e0b;animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
+#btnAwake{opacity:.3;transition:opacity var(--transition)}
+#btnAwake.on{opacity:1;background:#fef9c3}
+.pasterow{display:flex;gap:8px;margin-top:10px}
+.pasterow input{flex:1;min-width:0;height:44px;padding:0 12px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);outline:none}
+.pasterow input:focus{border-color:var(--c-primary)}
+.pasterow button{flex:none;width:72px;height:44px;border:none;border-radius:var(--radius-s);background:var(--c-primary);color:#fff;font-weight:700}
 .note{font-size:12px;color:var(--c-sub);margin-top:12px;line-height:1.7}
 .stat{display:flex;align-items:center;font-size:14px;font-weight:600;margin-bottom:12px}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:#1f2937;color:#fff;padding:10px 16px;border-radius:22px;font-size:14px;font-weight:600;z-index:999;display:flex;gap:14px;align-items:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2)}
@@ -122,6 +132,7 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
     <div class="hrow">
       <h1>🛒 買い物リスト</h1>
       <div class="hbtns">
+        <button class="ibtn tappable" id="btnAwake" aria-label="画面をつけたままにする" style="display:none">☀️</button>
         <button class="ibtn tappable" id="btnShare" aria-label="共有と同期"><span id="syncDot" class="dot"></span>📤</button>
         <button class="ibtn tappable" id="btnMenu" aria-label="メニュー">⋯</button>
       </div>
@@ -483,11 +494,14 @@ function openShare(){
     ${on?`<div class="stat"><span class="dot ${status==='on'?'on':status==='connecting'?'connecting':''}"></span>${st}</div>
       <p class="desc">招待リンクを開いた人と、リストが自動で同期されます。</p>
       <button class="btn p tappable" data-s="invite">📤 招待リンクを送る</button>
+      <button class="btn s tappable" data-s="copylink">🔗 招待リンクをコピー</button>
       <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>
       <button class="btn g tappable" data-s="leave" style="color:var(--c-danger)">同期をやめる</button>`
     :`<p class="desc">アカウント登録は不要です。はじめると招待リンクができ、それを開いた人とリストが自動で同期されます。</p>
       <button class="btn p tappable" data-s="start">🔗 共有をはじめる</button>
-      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>`}
+      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>
+      <p class="note" style="margin-top:16px">招待リンクをもらっている場合は、ここに貼り付けて参加できます（ホーム画面のアプリはこちら）。</p>
+      <div class="pasterow"><input id="joinInput" placeholder="招待リンクを貼り付け" aria-label="招待リンク"><button class="tappable" data-s="join">参加</button></div>`}
     <button class="btn g tappable" data-close2>閉じる</button>
     <p class="note">内容は端末で暗号化してから送られ、中継サーバーには読めません。招待リンクを知っている人は誰でも参加できるので、家族以外には送らないでください。</p>`;
   const sh=$('#sheetShare');
@@ -502,6 +516,12 @@ function openShare(){
       if(!window.crypto?.subtle){toast('https のページで開いてください');return}
       SY.room=newRoom();saveSY();
       await syncStart();haptic();openShare();
+    }else if(a==='join'){
+      const m=($('#joinInput').value||'').match(/[0-9a-f]{32}/);
+      if(!m){toast('招待リンクが読み取れません');return}
+      closeAll();askJoin(m[0]);
+    }else if(a==='copylink'){
+      copy(inviteUrl()).then(()=>toast('招待リンクをコピーしました'));
     }else if(a==='invite'){
       const url=inviteUrl();
       if(navigator.share){try{await navigator.share({title:'買い物リストに参加',text:'買い物リストを一緒に使おう。このリンクを開くと同期されます。',url})}catch{}}
@@ -513,10 +533,7 @@ function openShare(){
   };
   open('#ovShare');
 }
-function checkIncoming(){
-  const m=location.hash.match(/^#r=([0-9a-f]{32})$/); if(!m) return;
-  const code=m[1];
-  history.replaceState(null,'',location.pathname+location.search);
+function askJoin(code){
   if(SY.room===code){toast('すでにこのリストと同期中です');return}
   if(!window.crypto?.subtle){toast('https のページで開いてください');return}
   confirmSheet({title:'共有リストに参加しますか？',
@@ -526,6 +543,11 @@ function checkIncoming(){
       S.items.forEach(i=>dirty.add(i.id));
       await syncStart();toast('参加しました');
     }});
+}
+function checkIncoming(){
+  const m=location.hash.match(/^#r=([0-9a-f]{32})$/); if(!m) return;
+  history.replaceState(null,'',location.pathname+location.search);
+  askJoin(m[1]);
 }
 
 /* ===== メニュー ===== */
@@ -582,6 +604,33 @@ $('#btnShare').addEventListener('click',openShare);
 $('#btnMenu').addEventListener('click',openMenu);
 window.addEventListener('hashchange',checkIncoming);
 window.addEventListener('storage',e=>{if(e.key===KEY){try{const d=JSON.parse(e.newValue);if(d&&Array.isArray(d.items)){S={items:d.items,hist:d.hist||[]};render()}}catch{}}});
+
+/* ===== 買い物中は画面を消さない（Screen Wake Lock） ===== */
+const AWAKE='kaimono2_awake';
+let wl=null;
+const awakeOn=()=>{try{return localStorage.getItem(AWAKE)==='1'}catch{return false}};
+async function applyAwake(showErr){
+  const b=$('#btnAwake'); if(!b) return;
+  if(!('wakeLock' in navigator)){b.style.display='none';return}
+  b.style.display='';b.classList.toggle('on',awakeOn());
+  try{
+    if(awakeOn()&&document.visibilityState==='visible'){
+      if(!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}
+    }else if(wl){await wl.release();wl=null}
+  }catch{wl=null;if(showErr&&awakeOn())toast('端末の設定で画面の常時点灯が許可されていません')}
+}
+$('#btnAwake').addEventListener('click',()=>{
+  const on=!awakeOn();
+  try{localStorage.setItem(AWAKE,on?'1':'0')}catch{}
+  haptic();applyAwake(true);
+  toast(on?'☀️ 画面をつけたままにします':'画面は通常どおり消えます');
+});
+document.addEventListener('visibilitychange',()=>applyAwake(false));
+
+/* ===== オフライン対応（Service Worker） ===== */
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 
 /* ===== 旧版（JSONBin版）からの引き継ぎ =====
    同じURLで動いていた旧版が端末に残したデータ（と、あれば JSONBin の最新データ）を取り込む。
@@ -640,6 +689,7 @@ async function migrateOld(force){
 }
 
 render();
+applyAwake(false);
 syncStart();
 migrateOld();
 checkIncoming();
