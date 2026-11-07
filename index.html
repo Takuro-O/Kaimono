@@ -167,7 +167,7 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 /* ===== データ ===== */
 const KEY='kaimono2_v1';
 /* 「買う場所」で分類する。cat には場所の名前をそのまま入れるので、端末ごとに増やしても同期で自然に伝わる */
-const SHOPS=[{n:'スーパー',e:'🏪'},{n:'Amazon',e:'📦'},{n:'セリア',e:'🧺'},{n:'ダイソー',e:'🛍️'},{n:'その他',e:'🛒'}];
+const SHOPS=[{n:'スーパー',e:'🏪'},{n:'Amazon',e:'📦'},{n:'セリア',e:'🧺'},{n:'ダイソー',e:'🛍️'},{n:'無印',e:'🏷️'},{n:'ニトリ',e:'🛋️'},{n:'その他',e:'🛒'}];
 const SHOP_E=Object.fromEntries(SHOPS.map(x=>[x.n,x.e]));
 const shopE=n=>SHOP_E[n]||'🏬';
 const LEGACY=new Set(['veg','meat','dairy','staple','drink','season','frozen','daily','other']);
@@ -217,8 +217,9 @@ let tab='list';
 
 function parseInput(raw){
   let s=norm(raw), qty=1;
-  const m=s.match(/^(.*?)[\s　]*[x×＊*]?\s*(\d{1,2})\s*(個|本|袋|パック|つ|枚|丁|缶)?$/);
-  if(m&&m[1]){s=m[1];qty=Math.min(99,+m[2]||1)}
+  /* 「牛乳 2」「牛乳×2」「牛乳 2本」「牛乳2本」だけを数量として読む（「ビタミンB12」などはそのまま商品名） */
+  const m=s.match(/^(.+?)[\s　]*[x×＊*][\s　]*(\d{1,2})$/)||s.match(/^(.+?)[\s　]+(\d{1,2})(?:個|本|袋|パック|つ|枚|丁|缶)?$/)||s.match(/^(.+?)(\d{1,2})(?:個|本|袋|パック|つ|枚|丁|缶)$/);
+  if(m){s=norm(m[1]);qty=Math.min(99,Math.max(1,+m[2]||1))}
   return {name:s,qty};
 }
 function bumpHist(name,cat){
@@ -245,7 +246,8 @@ function render(){
 }
 function renderShopSel(){
   if(!shopList().includes(selShop)) selShop='スーパー';
-  $('#shopSel').innerHTML='<span class="lbl">追加先</span>'+shopList().map(n=>`<button type="button" class="chip tappable ${n===selShop?'sel':''}" data-shop="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('')+'<button type="button" class="chip tappable" data-shopmgr aria-label="場所を追加・整理">＋</button>';
+  $('#shopSel').innerHTML='<span class="lbl">追加先</span><button type="button" class="chip tappable" data-shopmgr aria-label="場所を追加・整理">＋</button>'+shopList().map(n=>`<button type="button" class="chip tappable ${n===selShop?'sel':''}" data-shop="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('');
+  $('#shopSel').querySelector('.sel')?.scrollIntoView?.({inline:'nearest',block:'nearest'});
 }
 function openShopMgr(){
   const sh=$('#sheetConfirm');
@@ -264,7 +266,7 @@ function openShopMgr(){
     const rm=e.target.closest('[data-rm]');
     if(rm){customShops=customShops.filter(x=>x!==rm.dataset.rm);saveShops();draw();renderShopSel();}
   };
-  open('#ovConfirm');
+  openOv('#ovConfirm');
 }
 function renderSugg(){
   const q=norm($('#addInput').value||'');
@@ -340,7 +342,7 @@ function toast(msg,undo){
 }
 
 /* ===== シート ===== */
-const open=id=>{$(id).classList.add('show');document.body.style.overflow='hidden'};
+const openOv=id=>{$(id).classList.add('show');document.body.style.overflow='hidden'};
 const closeAll=()=>{document.querySelectorAll('.ov').forEach(o=>o.classList.remove('show'));document.body.style.overflow=''};
 document.querySelectorAll('[data-close]').forEach(e=>e.addEventListener('click',closeAll));
 
@@ -377,15 +379,16 @@ function openEdit(id){
     }
     else if(e.target.closest('[data-del]')){closeAll();removeItem(id)}
   };
-  open('#ovEdit');
+  openOv('#ovEdit');
 }
 
 function confirmSheet({title,msg,label,danger=true,onOk}){
+  $('#sheetConfirm').onclick=null;
   $('#sheetConfirm').innerHTML=`<div class="grab"></div><h2>${esc(title)}</h2><p class="desc">${esc(msg)}</p>
     <button class="btn ${danger?'d':'p'} tappable" id="cOk">${esc(label)}</button><button class="btn g tappable" data-close2>キャンセル</button>`;
   $('#cOk').onclick=()=>{onOk();closeAll();haptic('heavy')};
   $('#sheetConfirm').querySelector('[data-close2]').onclick=closeAll;
-  open('#ovConfirm');
+  openOv('#ovConfirm');
 }
 
 /* ===== リアルタイム同期（登録不要）=====
@@ -402,9 +405,9 @@ const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const hex=u=>[...u].map(x=>x.toString(16).padStart(2,'0')).join('');
 const sha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(s)));
 
-let es=null,aesKey=null,topic='',seen={},dirty=new Set(),pushT=null,replayT=null,retryT=null,retry=0,status='off',pushing=false;
+let es=null,aesKey=null,topic='',seen={},dirty=new Set(),pushT=null,replayT=null,retryT=null,retry=0,syncStatus='off',pushing=false;
 
-function setStatus(s){status=s;const d=$('#syncDot');if(d)d.className='dot '+(s==='on'?'on':s==='connecting'?'connecting':'')}
+function setStatus(s){syncStatus=s;const d=$('#syncDot');if(d)d.className='dot '+(s==='on'?'on':s==='connecting'?'connecting':'')}
 const hasSync=()=>!!(SY.room&&aesKey);
 const newRoom=()=>hex(crypto.getRandomValues(new Uint8Array(16)));
 const inviteUrl=()=>location.href.split('#')[0]+'#r='+SY.room;
@@ -421,7 +424,7 @@ async function openMsg(s){
 const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,memo:i.memo,done:!!i.done,del:!!i.del,t:i.t});
 function clean(r){
   const f=fixShop(r.cat,[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ '));
-  return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:f.cat,
+  return {id:String(r.id||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,24),name:String(r.name||'').slice(0,60),cat:f.cat,
     qty:Math.min(99,Math.max(1,+r.qty||1)),memo:f.memo.slice(0,100),
     done:!!r.done,del:!!r.del,t:+r.t||0};
 }
@@ -450,7 +453,7 @@ function pushDiff(){
   flush();
 }
 async function flush(){
-  if(pushing||!hasSync()||status!=='on'||!dirty.size) return;
+  if(pushing||!hasSync()||syncStatus!=='on'||!dirty.size) return;
   pushing=true;let failed=false;
   try{
     const ids=[...dirty];dirty.clear();
@@ -534,10 +537,10 @@ async function copy(t){
 }
 function openShare(){
   const on=!!SY.room;
-  const st={on:'リアルタイム同期中',connecting:'接続しています…',off:'同期はオフです'}[on?status:'off'];
+  const st={on:'リアルタイム同期中',connecting:'接続しています…',off:'同期はオフです'}[on?syncStatus:'off'];
   $('#sheetShare').innerHTML=`<div class="grab"></div>
     <h2>${on?'家族と共有中':'家族とリアルタイム共有'}</h2>
-    ${on?`<div class="stat"><span class="dot ${status==='on'?'on':status==='connecting'?'connecting':''}"></span>${st}</div>
+    ${on?`<div class="stat"><span class="dot ${syncStatus==='on'?'on':syncStatus==='connecting'?'connecting':''}"></span>${st}</div>
       <p class="desc">招待リンクを開いた人と、リストが自動で同期されます。</p>
       <button class="btn p tappable" data-s="invite">📤 招待リンクを送る</button>
       <button class="btn s tappable" data-s="copylink">🔗 招待リンクをコピー</button>
@@ -577,7 +580,7 @@ function openShare(){
       confirmSheet({title:'同期をやめますか？',msg:'この端末のリストはそのまま残ります。他の端末とは同期されなくなります。',label:'やめる',onOk:()=>{syncStop();toast('同期をやめました')}});
     }
   };
-  open('#ovShare');
+  openOv('#ovShare');
 }
 function askJoin(code){
   if(SY.room===code){toast('すでにこのリストと同期中です');return}
@@ -611,7 +614,7 @@ function openMenu(){
     if(m==='reimport') migrateOld(true);
     if(m==='clearAll') confirmSheet({title:'リストを全件削除しますか？',msg:'同期中の場合は、共有している全員のリストからも消えます。',label:'削除する',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
   };
-  open('#ovMenu');
+  openOv('#ovMenu');
 }
 function doClearDone(){
   const done=vis().filter(i=>i.done); if(!done.length){toast('購入済みの商品はありません');return}
@@ -691,7 +694,7 @@ const MK='kaimono2_migrated';
 const OLD_WHO={takuro:'たくろう',yuka:'ゆか'};
 const OLD_SHOP={super:'スーパー',amazon:'Amazon',other:'その他'};
 function importOld(items,templates){
-  let n=0;const now=Date.now();
+  let n=0;
   const arr=a=>Array.isArray(a)?a:[];
   for(const o of arr(items)){
     if(!o||typeof o!=='object'||o.deleted) continue;
