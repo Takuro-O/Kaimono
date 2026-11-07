@@ -1,2210 +1,599 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=">
-  <link rel="apple-touch-icon" href="data:image/png;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=">
-  <link rel="manifest" id="pwa-manifest">
-  <meta name="apple-mobile-web-app-title" content="買い物リスト">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>買い物リスト</title>
-  <style>
-    :root {
-      --c-bg:#ffffff;--c-surface:#f8f9fa;--c-border:#e8e8e8;
-      --c-text:#1a1a1a;--c-sub:#888888;--c-primary:#2563eb;
-      --c-primary-light:#eff6ff;--c-danger:#ef4444;--c-success:#22c55e;
-      --radius-s:10px;--radius-m:14px;--radius-l:22px;
-      --shadow-card:0 1px 4px rgba(0,0,0,0.07);
-      --shadow-modal:0 -4px 32px rgba(0,0,0,0.12);
-      --transition:0.18s ease;
-      /* z-index 一元管理 */
-      --z-header:100;--z-fab:90;--z-modal:200;--z-cat:300;--z-setup:500;--z-confirm:600;--z-toast:999;
-      /* iPhone 17 safe areas */
-      --sat: env(safe-area-inset-top);
-      --sab: env(safe-area-inset-bottom);
-      --sal: env(safe-area-inset-left);
-      --sar: env(safe-area-inset-right);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --c-bg:#1c1c1e;--c-surface:#2c2c2e;--c-border:#3a3a3c;
-        --c-text:#f2f2f7;--c-sub:#98989f;--c-primary:#3b82f6;
-        --c-primary-light:#1e3a5f;--c-danger:#f87171;--c-success:#34d399;
-        --shadow-card:0 1px 4px rgba(0,0,0,0.35);
-        --shadow-modal:0 -4px 32px rgba(0,0,0,0.45);
-      }
-      header, #bottom-nav { background:rgba(28,28,30,0.92); }
-      .modal-handle { background:#54545a; }
-    }
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html,body{height:100%;}
-    body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;
-      background:var(--c-bg);color:var(--c-text);font-size:16px;line-height:1.5;
-      -webkit-text-size-adjust:100%;overscroll-behavior:none;}
-    #app{max-width:430px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;}
-    button{font-family:inherit;cursor:pointer;touch-action:manipulation;}
-    button:disabled{opacity:0.55;cursor:not-allowed;}
-    input,textarea,select{font-family:inherit;font-size:16px;}
-    /* タップ領域を最低44pxに（iOS HIG準拠） */
-    .tappable{transition:transform var(--transition),opacity var(--transition);
-      -webkit-tap-highlight-color:transparent;min-height:44px;display:inline-flex;
-      align-items:center;justify-content:center;}
-    button.tappable{min-height:44px;}
-    .tappable:active{transform:scale(0.97);opacity:0.85;}
-    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    @keyframes fadeOut{from{opacity:1}to{opacity:0}}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="買い物リスト">
+<meta name="theme-color" content="#ffffff">
+<title>買い物リスト</title>
+<style>
+:root{
+  --c-bg:#ffffff;--c-surface:#f6f7f9;--c-border:#eeeeee;--c-text:#1a1a1a;--c-sub:#888888;
+  --c-primary:#16a34a;--c-primary-light:#ecfdf3;--c-danger:#ef4444;--c-success:#22c55e;
+  --radius-s:8px;--radius-m:12px;--radius-l:20px;
+  --shadow-card:0 1px 4px rgba(0,0,0,.07);--shadow-modal:0 -4px 24px rgba(0,0,0,.10);--transition:.18s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;background:var(--c-bg);color:var(--c-text);font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+#app{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+button{font-family:inherit;cursor:pointer;touch-action:manipulation;color:inherit}
+input,textarea{font-family:inherit;font-size:16px;color:var(--c-text)}
+.tappable{transition:transform var(--transition),opacity var(--transition);-webkit-tap-highlight-color:transparent}
+.tappable:active{transform:scale(.97);opacity:.85}
 
-    /* ── Header ── */
-    header{position:sticky;top:0;z-index:var(--z-header);background:rgba(255,255,255,0.94);
-      backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
-      border-bottom:1px solid var(--c-border);
-      padding:0 12px 0 16px;height:56px;
-      display:flex;align-items:center;justify-content:space-between;}
-    header h1{font-size:17px;font-weight:700;}
-    .sync-dot{width:7px;height:7px;border-radius:50%;background:#ddd;
-      transition:background 0.4s;flex-shrink:0;margin-right:7px;}
-    .sync-dot.green{background:var(--c-success);}
-    .sync-dot.red{background:var(--c-danger);}
-    .sync-dot.yellow{background:#f59e0b;animation:pulse 1s infinite;}
+header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--c-border);padding:env(safe-area-inset-top) 16px 0;}
+.hrow{height:56px;display:flex;align-items:center;justify-content:space-between}
+.hrow h1{font-size:18px;font-weight:700}
+.hbtns{display:flex;gap:4px}
+.ibtn{height:40px;min-width:40px;padding:0 10px;border:none;background:transparent;border-radius:var(--radius-s);font-size:20px}
+.ibtn.txt{font-size:13px;font-weight:600;color:var(--c-primary)}
 
-    /* ── Bottom nav（home indicator対応） ── */
-    #bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;
-      background:rgba(255,255,255,0.96);backdrop-filter:blur(20px) saturate(180%);
-      -webkit-backdrop-filter:blur(20px) saturate(180%);
-      border-top:1px solid var(--c-border);
-      display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-header);}
-    .nav-btn{flex:1;height:54px;display:flex;flex-direction:column;align-items:center;
-      justify-content:center;gap:3px;background:none;border:none;
-      font-size:10px;font-weight:500;color:var(--c-sub);position:relative;
-      min-height:44px;}
-    .nav-btn .nav-icon{font-size:22px;position:relative;line-height:1;}
-    .nav-btn.active{color:var(--c-primary);}
+.addbar{display:flex;gap:8px;padding:4px 0 10px}
+.addbar input{flex:1;height:44px;padding:0 14px;background:var(--c-surface);border:1.5px solid transparent;border-radius:var(--radius-m);outline:none;transition:border-color var(--transition)}
+.addbar input:focus{border-color:var(--c-primary);background:#fff}
+.addbar button{width:64px;height:44px;border:none;border-radius:var(--radius-m);background:var(--c-primary);color:#fff;font-size:15px;font-weight:700}
 
-    main{flex:1;overflow-y:auto;padding:10px 0 calc(76px + env(safe-area-inset-bottom));
-      -webkit-overflow-scrolling:touch;}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:32px;padding:0 12px;border:1px solid var(--c-border);background:#fff;border-radius:16px;font-size:14px;white-space:nowrap}
+.chip b{color:var(--c-primary);margin-right:2px}
 
-    /* ── Search bar ── */
-    .search-bar{padding:0 14px 10px;}
-    .search-input-wrap{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;
-      background:var(--c-surface);border-radius:var(--radius-s);}
-    .search-icon{font-size:14px;color:var(--c-sub);flex-shrink:0;}
-    .search-input{flex:1;border:none;background:transparent;font-size:15px;color:var(--c-text);
-      outline:none;min-width:0;height:100%;}
-    .search-input::placeholder{color:var(--c-sub);}
-    .search-clear-btn{background:none;border:none;color:var(--c-sub);font-size:14px;
-      padding:2px 4px;flex-shrink:0;min-height:auto;}
+.seg{display:flex;background:var(--c-surface);border-radius:var(--radius-s);padding:3px;margin:0 16px 12px}
+.seg button{flex:1;height:34px;border:none;border-radius:6px;font-size:14px;font-weight:600;background:transparent;color:var(--c-sub);transition:all var(--transition)}
+.seg button.active{background:#fff;color:var(--c-text);box-shadow:var(--shadow-card)}
 
-    /* ── Filter tabs ── */
-    .filter-bar{display:flex;gap:7px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none;}
-    .filter-bar::-webkit-scrollbar{display:none;}
-    .filter-chip{flex-shrink:0;height:32px;padding:0 14px;border-radius:16px;
-      border:1.5px solid var(--c-border);background:var(--c-bg);color:var(--c-sub);
-      font-size:13px;font-weight:600;min-height:44px;display:inline-flex;
-      align-items:center;justify-content:center;}
-    .filter-chip.active{background:var(--c-primary);border-color:var(--c-primary);color:#fff;}
+main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
+.progress{margin:0 16px 14px}
+.progress .bar{height:6px;background:var(--c-surface);border-radius:3px;overflow:hidden}
+.progress .bar i{display:block;height:100%;background:var(--c-primary);border-radius:3px;transition:width .3s ease}
+.progress .meta{display:flex;justify-content:space-between;font-size:13px;color:var(--c-sub);margin-top:6px}
 
-    /* ── Summary bar ── */
-    .summary-bar{margin:0 14px 10px;padding:11px 14px;background:var(--c-surface);
-      border-radius:var(--radius-m);display:flex;justify-content:space-between;align-items:center;}
+.sec-h{font-size:13px;font-weight:600;color:var(--c-sub);padding:0 16px;margin:18px 0 6px;display:flex;justify-content:space-between;align-items:center}
+.sec-h button{border:none;background:none;font-size:13px;font-weight:600;color:var(--c-primary)}
+.card{margin:0 16px;border:1px solid var(--c-border);border-radius:var(--radius-m);overflow:hidden;box-shadow:var(--shadow-card);background:#fff}
+.rw{position:relative;overflow:hidden;border-top:1px solid var(--c-border)}
+.rw:first-child{border-top:none}
+.rw .del{position:absolute;inset:0;background:var(--c-danger);color:#fff;display:flex;align-items:center;justify-content:flex-end;padding-right:22px;font-size:20px}
+.row{position:relative;background:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:56px;transition:transform .2s ease}
+.chk{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid #cfd4da;background:#fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;transition:all var(--transition)}
+.done .chk{background:var(--c-primary);border-color:var(--c-primary)}
+.body{flex:1;min-width:0;text-align:left;background:none;border:none}
+.nm{font-size:16px;font-weight:500;display:flex;gap:6px;align-items:baseline}
+.nm .q{font-size:13px;font-weight:700;color:var(--c-primary);flex:none}
+.sub{font-size:12px;color:var(--c-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.done .nm,.done .sub{color:#b4b9c0;text-decoration:line-through}
+.pr{flex:none;font-size:13px;color:var(--c-sub)}
 
-    /* ── Person group header ── */
-    .person-section{margin-bottom:2px;}
-    .person-header{display:flex;align-items:center;gap:8px;padding:10px 14px 5px;
-      cursor:pointer;user-select:none;min-height:44px;}
-    .person-icon{font-size:18px;}
-    .person-name{font-size:15px;font-weight:700;color:var(--c-text);flex:1;}
-    .person-header.collapsed .shop-toggle{transform:rotate(-90deg);}
+.empty{text-align:center;padding:56px 24px;color:var(--c-sub)}
+.empty .em{font-size:48px;margin-bottom:12px}
+.empty p:first-of-type{font-size:16px;font-weight:600;color:var(--c-text);margin-bottom:6px}
+.empty p{font-size:14px}
 
-    /* ── Shop group header ── */
-    .shop-header{display:flex;align-items:center;gap:8px;padding:8px 14px 6px;
-      cursor:pointer;user-select:none;min-height:44px;}
-    .shop-icon{font-size:15px;}
-    .shop-name{font-size:13px;font-weight:700;color:var(--c-text);flex:1;}
-    .shop-count{font-size:11px;font-weight:600;color:var(--c-sub);
-      background:var(--c-surface);border-radius:9px;padding:1px 7px;}
-    .shop-price{font-size:12px;font-weight:600;color:var(--c-primary);}
-    .shop-toggle{font-size:10px;color:var(--c-sub);transition:transform var(--transition);margin-left:4px;}
-    .shop-header.collapsed .shop-toggle{transform:rotate(-90deg);}
-    .shop-section{margin-bottom:4px;}
+.hrowx{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--c-border);min-height:56px}
+.hrowx:first-child{border-top:none}
+.hrowx .nm{flex:1;min-width:0}
+.hrowx .star{border:none;background:none;font-size:20px;width:36px;height:36px;filter:grayscale(1);opacity:.4}
+.hrowx .star.on{filter:none;opacity:1}
+.hrowx .add{flex:none;height:34px;padding:0 14px;border:none;border-radius:17px;background:var(--c-primary-light);color:var(--c-primary);font-weight:700;font-size:14px}
+.hrowx .add.in{background:var(--c-surface);color:var(--c-sub)}
 
-    /* ── Item row（タップ領域44px以上確保） ── */
-    .item-card{margin:0 14px 6px;background:var(--c-bg);border:1px solid var(--c-border);
-      border-radius:var(--radius-s);box-shadow:var(--shadow-card);overflow:hidden;position:relative;}
-    .item-card.done{opacity:0.5;}
-    .item-row{display:flex;align-items:center;gap:10px;padding:9px 10px;min-height:44px;}
-    .check-btn{width:26px;height:26px;border-radius:50%;flex-shrink:0;
-      border:1.5px solid var(--c-border);background:var(--c-bg);
-      display:flex;align-items:center;justify-content:center;
-      font-size:13px;transition:all var(--transition);
-      -webkit-tap-highlight-color:transparent;}
-    .check-btn:active{transform:scale(0.9);opacity:0.8;}
-    .check-btn.checked{background:var(--c-success);border-color:var(--c-success);color:#fff;}
-    .item-name{font-size:15px;font-weight:600;flex:1;line-height:1.3;}
-    .item-card.done .item-name{text-decoration:line-through;color:var(--c-sub);}
-    .item-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-    .item-qty{font-size:12px;color:var(--c-sub);}
-    .item-price-tag{font-size:12px;font-weight:600;color:var(--c-primary);
-      background:var(--c-primary-light);border-radius:6px;padding:2px 7px;}
-    .item-note-inline{font-size:12px;color:var(--c-sub);padding:0 10px 8px 46px;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .cat-tag{font-size:12px;color:var(--c-sub);background:var(--c-surface);
-      border-radius:5px;padding:2px 6px;flex-shrink:0;}
-    .item-delete-bg{position:absolute;inset:0;background:var(--c-danger);border-radius:var(--radius-s);
-      display:flex;align-items:center;justify-content:flex-end;padding-right:16px;z-index:-1;}
+.ov{display:none;position:fixed;inset:0;z-index:200;align-items:flex-end;justify-content:center}
+.ov.show{display:flex}
+.ov .bd{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.sheet{position:relative;width:100%;max-width:430px;background:#fff;border-radius:var(--radius-l) var(--radius-l) 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:90dvh;overflow-y:auto;box-shadow:var(--shadow-modal);animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.grab{width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 18px}
+.sheet h2{font-size:17px;font-weight:700;margin-bottom:4px}
+.sheet .desc{font-size:14px;color:var(--c-sub);margin-bottom:16px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:13px;font-weight:600;color:var(--c-sub);margin-bottom:6px}
+.fld input,.fld textarea{width:100%;height:44px;padding:0 12px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);outline:none;transition:border-color var(--transition);background:#fff}
+.fld input:focus{border-color:var(--c-primary)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cats{display:flex;flex-wrap:wrap;gap:8px}
+.cats button{height:36px;padding:0 12px;border:1.5px solid var(--c-border);background:#fff;border-radius:18px;font-size:14px}
+.cats button.on{border-color:var(--c-primary);background:var(--c-primary-light);color:var(--c-primary);font-weight:700}
+.stp{display:flex;align-items:center;border:1.5px solid var(--c-border);border-radius:var(--radius-s);overflow:hidden;width:fit-content}
+.stp button{width:44px;height:42px;background:var(--c-surface);border:none;font-size:20px}
+.stp span{min-width:44px;text-align:center;font-weight:700}
+.btn{width:100%;height:48px;border:none;border-radius:var(--radius-s);font-size:16px;font-weight:600;margin-top:8px}
+.btn.p{background:var(--c-primary);color:#fff}
+.btn.s{background:transparent;color:var(--c-primary);border:1.5px solid var(--c-primary)}
+.btn.d{background:var(--c-danger);color:#fff}
+.btn.g{background:transparent;color:var(--c-sub);height:44px}
+.mrow{width:100%;height:54px;display:flex;align-items:center;gap:12px;background:none;border:none;border-top:1px solid var(--c-border);font-size:16px;text-align:left}
+.mrow:first-of-type{border-top:none}
+.mrow span:first-child{font-size:20px;width:28px;text-align:center}
 
-    #fab{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));right:20px;
-      width:56px;height:56px;border-radius:50%;background:var(--c-primary);color:#fff;border:none;
-      font-size:28px;box-shadow:0 4px 18px rgba(37,99,235,0.38);z-index:var(--z-fab);
-      display:flex;align-items:center;justify-content:center;}
-
-    /* ── Modal / Sheet ── */
-    .modal-overlay{display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:flex-end;justify-content:center;}
-    .modal-overlay.open{display:flex;}
-    .modal-bd{position:absolute;inset:0;background:rgba(0,0,0,0.45);animation:fadeIn 0.2s ease;}
-    .modal-sheet{position:relative;width:100%;max-width:430px;background:var(--c-bg);
-      border-radius:var(--radius-l) var(--radius-l) 0 0;
-      max-height:92vh;max-height:92dvh;overflow:hidden;display:flex;flex-direction:column;
-      box-shadow:var(--shadow-modal);animation:slideUp 0.28s cubic-bezier(.32,.72,0,1);}
-    .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;
-      padding:20px 16px 8px;flex:1;}
-    .modal-footer{padding:10px 16px;
-      padding-bottom:calc(14px + env(safe-area-inset-bottom));
-      border-top:1px solid var(--c-border);background:var(--c-bg);flex-shrink:0;}
-    .modal-handle{width:40px;height:4px;background:#d0d0d0;border-radius:2px;margin:0 auto 18px;}
-
-    /* ── Form ── */
-    .form-label{display:block;font-size:13px;font-weight:600;color:var(--c-sub);margin-bottom:6px;}
-    .form-input{width:100%;height:48px;padding:0 14px;border:1.5px solid var(--c-border);
-      border-radius:var(--radius-s);background:var(--c-bg);font-size:16px;color:var(--c-text);
-      transition:border-color var(--transition);outline:none;
-      -webkit-appearance:none;appearance:none;}
-    .form-input:focus{border-color:var(--c-primary);}
-    .form-mb{margin-bottom:16px;}
-
-    /* ── Segmented control ── */
-    .seg-ctrl{display:flex;border:1.5px solid var(--c-border);border-radius:var(--radius-s);overflow:hidden;}
-    .seg-btn{flex:1;height:44px;background:var(--c-bg);border:none;font-size:13px;font-weight:600;
-      color:var(--c-sub);border-right:1px solid var(--c-border);transition:all var(--transition);}
-    .seg-btn:last-child{border-right:none;}
-    .seg-btn.active{background:var(--c-primary);color:#fff;}
-
-    /* ── Stepper ── */
-    .stepper{display:inline-flex;align-items:center;border:1.5px solid var(--c-border);
-      border-radius:var(--radius-s);overflow:hidden;}
-    .stepper-btn{width:44px;height:44px;background:var(--c-surface);border:none;font-size:20px;color:var(--c-text);}
-    .stepper-val{min-width:48px;text-align:center;font-size:15px;font-weight:600;padding:0 6px;}
-    .unit-row{display:flex;gap:6px;flex-wrap:wrap;}
-    .unit-btn{height:36px;padding:0 13px;border-radius:18px;border:1.5px solid var(--c-border);
-      background:var(--c-bg);font-size:13px;color:var(--c-sub);}
-    .unit-btn.active{border-color:var(--c-primary);background:var(--c-primary-light);
-      color:var(--c-primary);font-weight:600;}
-
-    /* ── Cat sheet ── */
-    #cat-sheet{display:none;position:fixed;inset:0;z-index:var(--z-cat);align-items:flex-end;justify-content:center;}
-    #cat-sheet.open{display:flex;}
-    .cat-option{width:100%;min-height:52px;padding:12px 16px;background:none;border:none;
-      border-top:1px solid var(--c-border);font-size:16px;text-align:left;
-      display:flex;align-items:center;justify-content:space-between;color:var(--c-text);}
-
-    /* ── Buttons ── */
-    .btn-primary{width:100%;height:50px;background:var(--c-primary);color:#fff;border:none;
-      border-radius:var(--radius-s);font-size:16px;font-weight:700;}
-    .btn-danger{width:100%;height:48px;background:transparent;color:var(--c-danger);
-      border:1.5px solid var(--c-danger);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
-    .btn-outline{width:100%;height:48px;background:transparent;color:var(--c-primary);
-      border:1.5px solid var(--c-primary);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
-    .btn-ghost{width:100%;height:48px;background:transparent;color:var(--c-sub);
-      border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:15px;font-weight:600;}
-
-    /* ── Confirm ── */
-    #confirm-overlay{display:none;position:fixed;inset:0;z-index:var(--z-confirm);
-      align-items:center;justify-content:center;padding:24px;
-      background:rgba(0,0,0,0.5);animation:fadeIn 0.15s ease;}
-    #confirm-overlay.open{display:flex;}
-    .confirm-box{width:100%;max-width:300px;background:var(--c-bg);border-radius:var(--radius-l);
-      padding:24px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.20);}
-    .confirm-title{font-size:17px;font-weight:700;margin-bottom:8px;}
-    .confirm-msg{font-size:14px;color:var(--c-sub);margin-bottom:20px;line-height:1.6;white-space:pre-wrap;}
-    .confirm-btns{display:flex;gap:10px;}
-    .confirm-cancel{flex:1;height:46px;background:var(--c-surface);border:none;
-      border-radius:var(--radius-s);font-size:15px;font-weight:600;color:var(--c-sub);}
-    .confirm-ok{flex:1;height:46px;background:var(--c-danger);border:none;
-      border-radius:var(--radius-s);font-size:15px;font-weight:600;color:#fff;}
-    .confirm-ok.primary{background:var(--c-primary);}
-
-    /* ── Toast ── */
-    #toast{position:fixed;bottom:calc(82px + env(safe-area-inset-bottom));left:50%;
-      transform:translateX(-50%);background:rgba(26,26,26,0.88);color:#fff;
-      padding:10px 20px;border-radius:22px;font-size:14px;font-weight:600;
-      z-index:var(--z-toast);pointer-events:none;white-space:nowrap;}
-
-    /* ── Badge ── */
-    .badge{display:none;position:absolute;top:-4px;right:-6px;min-width:18px;height:18px;
-      background:var(--c-danger);color:#fff;border-radius:9px;font-size:10px;font-weight:700;
-      padding:0 3px;line-height:18px;text-align:center;border:2px solid var(--c-bg);}
-
-    /* ── Frequent ── */
-    .freq-card{margin:0 14px 8px;padding:13px 14px;background:var(--c-bg);
-      border:1px solid var(--c-border);border-radius:var(--radius-m);box-shadow:var(--shadow-card);
-      display:flex;align-items:center;gap:10px;}
-    .freq-info{flex:1;min-width:0;}
-    .freq-add-btn{width:36px;height:36px;border-radius:50%;background:var(--c-primary-light);
-      border:none;color:var(--c-primary);font-size:22px;display:flex;
-      align-items:center;justify-content:center;flex-shrink:0;}
-
-    /* ── Setup ── */
-    #setup-overlay{display:none;position:fixed;inset:0;z-index:var(--z-setup);background:var(--c-bg);
-      overflow-y:auto;padding:0 0 32px;}
-    #setup-overlay.open{display:block;}
-    .setup-scroll{max-width:400px;margin:0 auto;padding:36px 20px;}
-    .step-badge{display:inline-flex;align-items:center;justify-content:center;
-      width:22px;height:22px;border-radius:50%;background:var(--c-primary);
-      color:#fff;font-size:12px;font-weight:700;flex-shrink:0;}
-    .step-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
-    .step-title{font-size:14px;font-weight:600;margin-bottom:3px;}
-    .step-desc{font-size:12px;color:var(--c-sub);line-height:1.6;}
-    .divider{display:flex;align-items:center;gap:10px;margin:18px 0;}
-    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--c-border);}
-    .divider span{color:var(--c-sub);font-size:12px;}
-
-    /* ── Sync modal ── */
-    .code-box{background:var(--c-surface);border-radius:var(--radius-m);padding:14px;margin-bottom:14px;}
-    .code-text{font-size:12px;font-weight:600;color:var(--c-primary);word-break:break-all;line-height:1.5;}
-    .code-hint{font-size:11px;color:var(--c-sub);margin-top:5px;}
-
-    .page{display:none;}
-    .page.active{display:block;}
-    .empty-state{text-align:center;padding:56px 24px;color:var(--c-sub);}
-    .empty-icon{font-size:48px;margin-bottom:14px;}
-    .empty-title{font-size:15px;font-weight:600;color:var(--c-text);margin-bottom:6px;}
-    .empty-desc{font-size:13px;line-height:1.6;}
-  </style>
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#cbd5e1;vertical-align:middle}
+.dot.on{background:#22c55e}
+.dot.connecting{background:#f59e0b;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+.note{font-size:12px;color:var(--c-sub);margin-top:12px;line-height:1.7}
+.stat{display:flex;align-items:center;font-size:14px;font-weight:600;margin-bottom:12px}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:#1f2937;color:#fff;padding:10px 16px;border-radius:22px;font-size:14px;font-weight:600;z-index:999;display:flex;gap:14px;align-items:center;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#toast button{background:none;border:none;color:#86efac;font-weight:700;font-size:14px}
+</style>
 </head>
 <body>
 <div id="app">
   <header>
-    <div style="display:flex;align-items:center;">
-      <span class="sync-dot" id="sync-dot"></span>
-      <h1 id="page-title">🛒 買い物リスト</h1>
+    <div class="hrow">
+      <h1>🛒 買い物リスト</h1>
+      <div class="hbtns">
+        <button class="ibtn tappable" id="btnShare" aria-label="共有と同期"><span id="syncDot" class="dot"></span>📤</button>
+        <button class="ibtn tappable" id="btnMenu" aria-label="メニュー">⋯</button>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:2px;">
-      <button id="header-clear" class="tappable"
-        style="background:none;border:none;font-size:12px;color:var(--c-primary);font-weight:600;padding:4px 8px;"
-        onclick="clearDone()">購入済みクリア</button>
-      <button id="search-toggle-btn" class="tappable" onclick="toggleSearch()" aria-label="商品を検索"
-        style="background:none;border:none;font-size:17px;padding:4px 4px 4px 2px;">🔍</button>
-      <button class="tappable" onclick="openSyncModal()" aria-label="共有設定を開く"
-        style="background:none;border:none;font-size:19px;padding:4px 4px 4px 2px;">🔗</button>
+    <div id="addArea">
+      <form class="addbar" id="addForm" autocomplete="off">
+        <input id="addInput" type="text" placeholder="買うものを入力（例：牛乳 2）" enterkeyhint="done" aria-label="商品名">
+        <button type="submit" class="tappable">追加</button>
+      </form>
+      <div class="chips" id="sugg"></div>
     </div>
   </header>
 
-  <!-- 致命的な同期エラー用バナー -->
-  <div id="fatal-banner" style="display:none;background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 14px;">
-    <div style="display:flex;align-items:flex-start;gap:8px;">
-      <span style="font-size:18px;flex-shrink:0;">⚠️</span>
-      <div style="flex:1;min-width:0;">
-        <div id="fatal-banner-title" style="font-size:13px;font-weight:700;color:var(--c-danger);margin-bottom:2px;">同期できません</div>
-        <div id="fatal-banner-msg" style="font-size:12px;color:var(--c-text);line-height:1.5;"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="tappable" onclick="reauthOpen()"
-            style="padding:6px 12px;background:var(--c-primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;">再セットアップ</button>
-          <button class="tappable" onclick="dismissFatalBanner()"
-            style="padding:6px 12px;background:transparent;color:var(--c-sub);border:1px solid var(--c-border);border-radius:6px;font-size:12px;">閉じる</button>
-        </div>
-      </div>
-    </div>
+  <div class="seg" style="margin-top:12px">
+    <button class="tappable active" data-tab="list">🛒 リスト</button>
+    <button class="tappable" data-tab="fav">⭐ よく買うもの</button>
   </div>
 
-  <main>
-    <div id="page-list" class="page active">
-      <div class="search-bar" id="search-bar" style="display:none;">
-        <div class="search-input-wrap">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="search-input" class="search-input" placeholder="商品名・メモで検索" oninput="onSearchInput(this.value)">
-          <button class="tappable search-clear-btn" id="search-clear-btn" onclick="clearSearch()"
-            aria-label="検索をクリア" style="display:none;">✕</button>
-        </div>
-      </div>
-      <div class="filter-bar" id="filter-bar"></div>
-      <div class="summary-bar" id="summary-bar"></div>
-      <div id="list-content"></div>
-    </div>
-    <div id="page-freq" class="page">
-      <div style="padding:10px 14px 4px;">
-        <p style="font-size:12px;color:var(--c-sub);">タップで編集、右の＋でリストに追加できます</p>
-      </div>
-      <div id="freq-content"></div>
-    </div>
-  </main>
-
-  <nav id="bottom-nav" role="tablist" aria-label="メインナビゲーション">
-    <button class="nav-btn tappable active" data-page="list" onclick="showPage('list')" role="tab" aria-selected="true" aria-label="買い物リスト">
-      <span class="nav-icon">🛒<span class="badge" id="badge-list"></span></span>
-      <span>リスト</span>
-    </button>
-    <button class="nav-btn tappable" data-page="freq" onclick="showPage('freq')" role="tab" aria-selected="false" aria-label="よく買うもの">
-      <span class="nav-icon">⭐</span>
-      <span>よく買うもの</span>
-    </button>
-  </nav>
+  <main id="main"></main>
 </div>
 
-<button id="fab" class="tappable" onclick="openAddModal();haptic()" aria-label="商品を追加">＋</button>
-
-<!-- ── SETUP ── -->
-<div id="setup-overlay">
-<div class="setup-scroll">
-  <div style="text-align:center;margin-bottom:28px;">
-    <div style="font-size:52px;margin-bottom:10px;">🛒</div>
-    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">買い物リスト</div>
-    <div style="font-size:13px;color:var(--c-sub);line-height:1.7;">
-      家族とリアルタイムで共有できます<br>バックエンドに <strong>JSONBin.io</strong>（無料）を使います
-    </div>
-  </div>
-  <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:18px;margin-bottom:14px;">
-    <div style="font-size:14px;font-weight:700;margin-bottom:14px;">🆕 新しい部屋を作る</div>
-    <div class="step-row">
-      <span class="step-badge">1</span>
-      <div><div class="step-title">JSONBin.io に無料登録</div>
-        <div class="step-desc">Google/GitHubでサインアップできます</div>
-        <a href="https://jsonbin.io" target="_blank" rel="noopener"
-          style="display:inline-block;margin-top:6px;padding:6px 14px;background:var(--c-primary);
-          color:#fff;border-radius:var(--radius-s);font-size:13px;font-weight:600;text-decoration:none;">
-          jsonbin.io を開く →</a>
-      </div>
-    </div>
-    <div class="step-row">
-      <span class="step-badge">2</span>
-      <div><div class="step-title">Master Key をコピー</div>
-        <div class="step-desc">右上メニュー → API Keys → Master Key</div>
-      </div>
-    </div>
-    <div class="step-row" style="margin-bottom:10px;">
-      <span class="step-badge">3</span>
-      <div style="flex:1;"><div class="step-title">ここに貼り付けて作成</div>
-        <div class="step-desc">Master Keyは部屋作成時のみ使用され、<br>アプリには<strong>保存されません</strong>。<br>以降は権限を限定したキーで通信します。</div>
-      </div>
-    </div>
-    <div class="form-mb" style="margin-left:32px;">
-      <input class="form-input" id="master-key-input" type="password"
-        placeholder="$2a$10$xxxx…" autocomplete="off" style="font-size:14px;">
-    </div>
-    <button class="btn-primary tappable" id="create-btn" onclick="createRoom()"
-      style="margin-left:32px;width:calc(100% - 32px);height:46px;font-size:15px;">部屋を作る</button>
-    <p id="create-error" style="color:var(--c-danger);font-size:12px;margin-top:8px;margin-left:32px;display:none;"></p>
-  </div>
-  <div class="divider"><span>または招待を受けた場合</span></div>
-  <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:18px;">
-    <div style="font-size:14px;font-weight:700;margin-bottom:10px;">📩 招待コードで参加</div>
-    <div style="font-size:12px;color:var(--c-sub);margin-bottom:10px;">送られてきた招待コードを貼り付けてください</div>
-    <div class="form-mb">
-      <textarea id="invite-code-input" style="width:100%;min-height:72px;padding:10px 12px;
-        border:1.5px solid var(--c-border);border-radius:var(--radius-s);font-size:13px;
-        color:var(--c-text);resize:none;outline:none;line-height:1.5;background:var(--c-bg);"
-        placeholder="招待コードをここに貼り付け…"></textarea>
-    </div>
-    <button class="btn-outline tappable" onclick="joinRoom(this)">参加する</button>
-    <p id="join-error" style="color:var(--c-danger);font-size:12px;margin-top:8px;display:none;"></p>
-  </div>
-</div>
-</div>
-
-<!-- ── ADD/EDIT MODAL ── -->
-<div class="modal-overlay" id="modal">
-  <div class="modal-bd" onclick="closeModal()"></div>
-  <div class="modal-sheet">
-    <div style="padding:16px 16px 0;flex-shrink:0;">
-      <div class="modal-handle"></div>
-      <h2 id="modal-title" style="font-size:16px;font-weight:700;margin-bottom:14px;">商品を追加</h2>
-    </div>
-    <div class="modal-body">
-
-      <div class="form-mb">
-        <label class="form-label" for="inp-name">商品名 *</label>
-        <input class="form-input" id="inp-name" type="text" required placeholder="例: 牛乳、トマト…" maxlength="50"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('cat-select-btn').focus();openCatSheet();}">
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label">買う人</label>
-        <div class="seg-ctrl" id="person-seg"></div>
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label">買う場所</label>
-        <div class="seg-ctrl" id="shop-seg"></div>
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label">カテゴリ</label>
-        <button class="tappable form-input" id="cat-select-btn" onclick="openCatSheet()"
-          style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
-          <span id="cat-select-label" style="color:var(--c-sub);">選択してください</span>
-          <span style="color:var(--c-sub);">›</span>
-        </button>
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label">数量</label>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div class="stepper">
-            <button class="stepper-btn tappable" onclick="changeQty(-1)">−</button>
-            <span class="stepper-val" id="qty-val">1</span>
-            <button class="stepper-btn tappable" onclick="changeQty(1)">＋</button>
-          </div>
-          <div class="unit-row" id="unit-row"></div>
-        </div>
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label" for="inp-price">金額（任意）</label>
-        <input class="form-input" id="inp-price" type="number" placeholder="例: 198" min="0" max="99999">
-      </div>
-
-      <div class="form-mb">
-        <label class="form-label" for="inp-note">メモ（任意）</label>
-        <input class="form-input" id="inp-note" type="text" placeholder="例: Sサイズ" maxlength="80">
-      </div>
-
-      <div class="form-mb" id="inp-frequent-row" style="margin-bottom:4px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="inp-frequent" style="width:18px;height:18px;accent-color:var(--c-primary);">
-          <span style="font-size:14px;">⭐ よく買うものに登録</span>
-        </label>
-      </div>
-
-    </div>
-    <div class="modal-footer">
-      <button class="btn-primary tappable" id="modal-submit" onclick="submitItem()" style="margin-bottom:8px;">追加する</button>
-      <button id="modal-delete" class="btn-danger tappable" onclick="deleteCurrentItem()" style="display:none;">削除する</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── CATEGORY SHEET ── -->
-<div id="cat-sheet">
-  <div class="modal-bd" onclick="closeCatSheet()"></div>
-  <div class="modal-sheet">
-    <div style="padding:16px 16px 0;flex-shrink:0;">
-      <div class="modal-handle"></div>
-      <p style="font-size:13px;font-weight:600;color:var(--c-sub);margin-bottom:6px;">カテゴリを選択</p>
-    </div>
-    <div class="modal-body" style="padding-top:0;">
-      <div id="cat-options"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ── SYNC MODAL ── -->
-<div class="modal-overlay" id="sync-modal">
-  <div class="modal-bd" onclick="closeSyncModal()"></div>
-  <div class="modal-sheet">
-    <div style="padding:16px 16px 0;flex-shrink:0;">
-      <div class="modal-handle"></div>
-      <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;">🔗 共有設定</h2>
-      <p style="font-size:12px;color:var(--c-sub);margin-bottom:14px;">下の招待コードをLINEで家族に送ってください</p>
-    </div>
-    <div class="modal-body" style="padding-top:0;">
-      <div class="code-box" id="invite-code-box">
-        <div class="code-text" id="sync-code-display">-</div>
-        <div class="code-hint">招待コード（このテキスト全体を送ってください）</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="btn-outline tappable" onclick="copyInviteCode()" style="flex:1;height:44px;font-size:13px;">📋 コピー</button>
-        <button class="btn-outline tappable" onclick="shareInviteCode()" style="flex:1;height:44px;font-size:13px;">📤 送る</button>
-      </div>
-      <div style="background:var(--c-surface);border-radius:var(--radius-m);padding:12px 14px;margin-bottom:14px;">
-        <p style="font-size:12px;font-weight:600;color:var(--c-sub);margin-bottom:6px;">同期ステータス</p>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span class="sync-dot" id="sync-dot-modal"></span>
-          <span id="sync-status-text" style="font-size:13px;">確認中…</span>
-        </div>
-        <p id="sync-last-time" style="font-size:11px;color:var(--c-sub);margin-top:4px;"></p>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-ghost tappable" onclick="confirmLeaveRoom()" style="margin-bottom:8px;">別の部屋に切り替える</button>
-      <button class="btn-ghost tappable" onclick="resetAllData()" style="color:var(--c-danger);border-color:var(--c-danger);">🗑 リストを全件削除</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── CONFIRM (z-index:600, 独立) ── -->
-<div id="confirm-overlay">
-  <div class="confirm-box">
-    <p class="confirm-title" id="confirm-title"></p>
-    <p class="confirm-msg"   id="confirm-msg"></p>
-    <div class="confirm-btns">
-      <button class="confirm-cancel tappable" id="confirm-cancel-btn">キャンセル</button>
-      <button class="confirm-ok tappable"     id="confirm-ok-btn">削除</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast" style="display:none;"></div>
+<div class="ov" id="ovEdit"><div class="bd" data-close></div><div class="sheet" id="sheetEdit"></div></div>
+<div class="ov" id="ovShare"><div class="bd" data-close></div><div class="sheet" id="sheetShare"></div></div>
+<div class="ov" id="ovMenu"><div class="bd" data-close></div><div class="sheet" id="sheetMenu"></div></div>
+<div class="ov" id="ovConfirm"><div class="bd" data-close></div><div class="sheet" id="sheetConfirm"></div></div>
+<div id="toast"></div>
 
 <script>
-// ══════════════════════════════════════
-// Constants
-// ══════════════════════════════════════
-const LOCAL_KEY = 'shoplist-v6-local';
-const ROOM_KEY  = 'shoplist-v6-room';
-const DATA_KEY  = 'shoplist-v6-data';   // syncItems/syncTemplates のローカルキャッシュ
-const SYNC_MS   = 90000; // JSONBin無料枠(累計1万リクエスト)を長持ちさせるため90秒間隔に変更
-const API       = 'https://api.jsonbin.io/v3/b';
-
-const SHOPS = [
-  {id:'super',  label:'スーパー', icon:'🏪'},
-  {id:'amazon', label:'Amazon',   icon:'📦'},
-  {id:'other',  label:'その他',   icon:'🛒'},
+/* ===== データ ===== */
+const KEY='kaimono2_v1';
+const CATS=[
+  {id:'veg',n:'野菜・果物',e:'🥬'},{id:'meat',n:'肉・魚',e:'🥩'},{id:'dairy',n:'乳製品・卵',e:'🥛'},
+  {id:'staple',n:'パン・主食',e:'🍞'},{id:'drink',n:'飲料',e:'🧃'},{id:'season',n:'調味料・乾物',e:'🧂'},
+  {id:'frozen',n:'冷凍・惣菜',e:'🍱'},{id:'daily',n:'日用品',e:'🧻'},{id:'other',n:'その他',e:'📦'}
 ];
-const SHOP_MAP = Object.fromEntries(SHOPS.map(s=>[s.id,s]));
-
-const PERSONS = [
-  {id:'both',   label:'両方',     icon:'👫'},
-  {id:'takuro', label:'たくろう', icon:'👨'},
-  {id:'yuka',   label:'ゆか',     icon:'👩'},
-];
-const PERSON_MAP = Object.fromEntries(PERSONS.map(p=>[p.id,p]));
-
-const CATEGORIES = [
-  {id:'vegfruit',label:'野菜・果物',icon:'🥦'},
-  {id:'meat',    label:'肉・魚',    icon:'🥩'},
-  {id:'dairy',   label:'乳製品・卵',icon:'🥛'},
-  {id:'bread',   label:'パン・穀物',icon:'🍞'},
-  {id:'frozen',  label:'冷凍・加工',icon:'🥫'},
-  {id:'drink',   label:'飲料',      icon:'🍺'},
-  {id:'daily',   label:'日用品',    icon:'🧴'},
-  {id:'other',   label:'その他',    icon:'🛒'},
-];
-const CAT_MAP = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
-const UNITS   = ['個','本','袋','缶','枚','パック','g','ml','L'];
-const FILTERS = [{id:'all',label:'すべて'},{id:'todo',label:'未購入'},{id:'done',label:'購入済み'}];
-
-// ══════════════════════════════════════
-// State
-// ══════════════════════════════════════
-let local, room={binId:null,apiKey:null,keyType:null}, syncItems=[], syncTemplates=[], lastSyncAt=null;
-let syncTimer=null, pushTimer=null;
-// 新しい端末で開いた直後、初回pullが終わるまでは「空っぽ」ではなく「読み込み中」を出す
-let isInitialSync=false;
-
-// 同期ステータス詳細
-// status: 'idle' | 'syncing' | 'ok' | 'offline' | 'error' | 'fatal'
-// fatalReason: 401='認証エラー', 403='権限不足', 404='部屋が見つかりません'
-// lastErrorAt, lastErrorMsg: デバッグ用
-const syncState = {
-  status: 'idle',
-  fatalReason: null,
-  lastErrorStatus: null,
-  lastErrorMsg: null,
-  lastErrorAt: null,
+const DICT={
+  veg:['にんじん','人参','玉ねぎ','たまねぎ','じゃがいも','キャベツ','レタス','トマト','きゅうり','なす','ピーマン','ねぎ','ほうれん草','白菜','大根','もやし','ブロッコリー','きのこ','しいたけ','バナナ','りんご','みかん','いちご','レモン','アボカド','野菜','果物','にんにく','しょうが'],
+  meat:['肉','豚','牛','鶏','ひき肉','ベーコン','ハム','ソーセージ','魚','鮭','サバ','さば','まぐろ','刺身','えび','いか','ツナ'],
+  dairy:['牛乳','卵','たまご','ヨーグルト','チーズ','バター','豆腐','納豆','生クリーム'],
+  staple:['パン','食パン','米','ご飯','パスタ','うどん','そば','ラーメン','麺','小麦粉','シリアル','もち'],
+  drink:['お茶','水','ジュース','コーヒー','紅茶','ビール','ワイン','炭酸','コーラ','麦茶','酒','ミルク'],
+  season:['醤油','しょうゆ','味噌','みそ','砂糖','塩','油','酢','みりん','だし','ソース','マヨネーズ','ケチャップ','ドレッシング','カレー','スパイス','こしょう','海苔','のり','ふりかけ'],
+  frozen:['冷凍','アイス','惣菜','弁当','餃子','ピザ','コロッケ','からあげ'],
+  daily:['ティッシュ','トイレット','洗剤','シャンプー','リンス','歯磨き','歯ブラシ','石鹸','ハンドソープ','ゴミ袋','ラップ','アルミホイル','スポンジ','電池','マスク','柔軟剤','キッチンペーパー','おむつ','生理']
 };
-
-// ══════════════════════════════════════
-// データ正規化（サーバー・ローカル両方の入り口で使う）
-// ══════════════════════════════════════
-// - 悪意ある同居人や Bin アカウント乗っ取り攻撃から UI を守る
-// - 想定外の型を早めに弾いて XSS・描画崩れを防ぐ
-// - 過剰に長い文字列は切り詰める（メモリ・レンダリング保護）
-const MAX_STR = 500;
-function clampStr(v, max){
-  if(typeof v!=='string')return '';
-  const m=max||MAX_STR;
-  return v.length>m?v.slice(0,m):v;
-}
-// idは内部生成（newId()）のみを想定：英数字・ハイフン・アンダースコアのみ許可。
-// idは画面描画時にonclick属性の中の文字列リテラルとして埋め込まれるため、
-// ここで文字種を絞らないと不正なidが混入した際にスクリプトインジェクションの
-// 糸口になり得る（例: 共有Binへ直接APIで不正なJSONを書き込まれた場合）。
-function sanitizeId(v){
-  const s=clampStr(String(v||''),100);
-  return /^[A-Za-z0-9_-]+$/.test(s) ? s : '';
-}
-function sanitizeItems(raw){
-  if(!Array.isArray(raw))return [];
-  return raw.map(r=>{
-    if(!r||typeof r!=='object')return null;
-    return {
-      id: sanitizeId(r.id),
-      name: clampStr(r.name, 80),
-      note: clampStr(r.note, 200),
-      category: clampStr(r.category, 30),
-      shop: clampStr(r.shop, 30),
-      person: r.person===null?null:clampStr(r.person, 30),
-      unit: clampStr(r.unit, 20),
-      qty: Math.max(0, Math.min(99999, Number(r.qty)||0)),
-      price: Math.max(0, Math.min(99999, Number(r.price)||0)),
-      done: !!r.done,
-      deleted: !!r.deleted,
-      frequent: !!r.frequent, // legacy
-      createdAt: Number(r.createdAt)||0,
-      updatedAt: Number(r.updatedAt)||0,
-    };
-  }).filter(r=>r&&r.id);  // idが無いものは捨てる
-}
-
-try{ local=JSON.parse(localStorage.getItem(LOCAL_KEY))||{filter:'todo',collapsedShops:[]}; }
-catch(e){ local={filter:'todo',collapsedShops:[]}; }
-try{ const r=localStorage.getItem(ROOM_KEY); if(r) room=JSON.parse(r); }
-catch(e){}
-// データもローカルに保存しておき、起動時に即表示できるようにする
-// （オフラインでも買い物リストが見える、pull待ち中も空白にならない）
-try{
-  const d=localStorage.getItem(DATA_KEY);
-  if(d){
-    const parsed=JSON.parse(d);
-    syncItems=sanitizeItems(parsed?.items);
-    syncTemplates=sanitizeItems(parsed?.templates);
-  }
-}catch(e){}
-
-function _lsSet(key, value){
-  try{
-    localStorage.setItem(key, value);
-  }catch(e){
-    if(e?.name==='QuotaExceededError'){
-      showToast('⚠️ 保存容量が上限に達しました');
-    }
-  }
-}
-const saveLocal = ()=> _lsSet(LOCAL_KEY, JSON.stringify(local));
-const saveRoom  = ()=> _lsSet(ROOM_KEY,  JSON.stringify(room));
-const saveData  = ()=> _lsSet(DATA_KEY,  JSON.stringify({items:syncItems, templates:syncTemplates}));
-
-// ══════════════════════════════════════
-// Utils
-// ══════════════════════════════════════
+const catOf=id=>CATS.find(c=>c.id===id)||CATS[CATS.length-1];
+const defState=()=>({items:[],hist:[]});
+let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&Array.isArray(d.items)?{items:d.items,hist:d.hist||[]}:defState()}catch{return defState()}})();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch{}};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+/* 各商品は更新時刻 t を持ち、削除は del:true（墓標）で表す。同期はこの t が新しい方を採用する */
+S.items.forEach(i=>{i.t=+i.t||0;i.del=!!i.del});
+S.items=S.items.filter(i=>!(i.del&&i.t<Date.now()-30*864e5));
+const vis=()=>S.items.filter(i=>!i.del);
+const touch=i=>{i.t=Math.max(Date.now(),(i.t||0)+1);markDirty(i.id);return i};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const haptic=(t='light')=>navigator.vibrate?.(t==='heavy'?30:10);
-const escHtml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const yen=n=>'¥'+Number(n).toLocaleString('ja-JP');
+const norm=s=>s.trim().replace(/\s+/g,' ');
 
-// ID比較は必ず文字列化して行う（旧データのnumeric IDと新UUIDの混在に対応）
-const sameId=(a,b)=>String(a)===String(b);
+let tab='list';
 
-// 衝突しないID生成
-// - Secure Context (HTTPS) では crypto.randomUUID() を使う
-// - file://や古いブラウザではgetRandomValuesにフォールバック
-// - さらにその先でもMath.randomで最低限動作する
-function newId(prefix=''){
-  let core;
-  if(typeof crypto!=='undefined'){
-    if(typeof crypto.randomUUID==='function'){
-      core=crypto.randomUUID();
-    }else if(typeof crypto.getRandomValues==='function'){
-      const a=new Uint8Array(16);
-      crypto.getRandomValues(a);
-      core=Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
-    }
-  }
-  if(!core){
-    // 最終フォールバック（暗号学的ではないが衝突確率は十分低い）
-    core=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)+'-'+Math.random().toString(36).slice(2,10);
-  }
-  return prefix?prefix+core:core;
+function guessCat(name){
+  const h=S.hist.find(x=>x.name===name); if(h) return h.cat;
+  for(const [cat,words] of Object.entries(DICT)) if(words.some(w=>name.includes(w))) return cat;
+  return 'other';
+}
+function parseInput(raw){
+  let s=norm(raw), qty=1;
+  const m=s.match(/^(.*?)[\s　]*[x×＊*]?\s*(\d{1,2})\s*(個|本|袋|パック|つ|枚|丁|缶)?$/);
+  if(m&&m[1]){s=m[1];qty=Math.min(99,+m[2]||1)}
+  return {name:s,qty};
+}
+function bumpHist(name,cat){
+  let h=S.hist.find(x=>x.name===name);
+  if(h){h.n++;h.cat=cat}else S.hist.push({id:uid(),name,cat,n:1,pin:false});
+}
+function addItem(name,qty=1,cat,extra={}){
+  name=norm(name); if(!name) return false;
+  const ex=vis().find(i=>!i.done&&i.name===name);
+  if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} の数量を ${ex.qty} にしました`);return true}
+  cat=cat||guessCat(name);
+  S.items.push(touch({id:uid(),name,cat,qty,price:'',memo:'',who:'',done:false,del:false,t:0,...extra}));
+  bumpHist(name,cat);save();render();return true;
 }
 
-let _toastT;
-function showToast(msg,dur=2200){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.style.display='block';t.style.animation='fadeIn 0.2s ease';
-  clearTimeout(_toastT);
-  _toastT=setTimeout(()=>{t.style.animation='fadeOut 0.3s ease';
-    setTimeout(()=>t.style.display='none',300);},dur);
-}
-
-// ── Confirm ダイアログ ──
-// 同時呼び出しはキューで直列化する（先のdialogが閉じるまで次は待つ）
-// AbortController でリスナーをまとめてcleanup
-let _confirmChain = Promise.resolve();
-
-function showConfirm(title, msg, okLabel='削除', okClass=''){
-  const job = async () => {
-    return new Promise(resolve => {
-      document.getElementById('confirm-title').textContent=title;
-      document.getElementById('confirm-msg').textContent=msg;
-      const okBtn=document.getElementById('confirm-ok-btn');
-      const cancelBtn=document.getElementById('confirm-cancel-btn');
-      okBtn.textContent=okLabel;
-      okBtn.className='confirm-ok tappable'+(okClass?' '+okClass:'');
-      const overlay=document.getElementById('confirm-overlay');
-      overlay.classList.add('open');
-
-      const ac=new AbortController();
-      const signal=ac.signal;
-      const done=(result)=>{
-        overlay.classList.remove('open');
-        ac.abort();
-        resolve(result);
-      };
-      okBtn.addEventListener('click', ()=>done(true), {signal});
-      cancelBtn.addEventListener('click', ()=>done(false), {signal});
-      // 背景タップで閉じる（キャンセル扱い）
-      overlay.addEventListener('click', e=>{
-        if(e.target===overlay) done(false);
-      }, {signal});
-      // Escキーでキャンセル
-      document.addEventListener('keydown', e=>{
-        if(e.key==='Escape') done(false);
-      }, {signal});
-    });
-  };
-  // 直列化：前のconfirmが閉じるまで次は表示しない
-  const next = _confirmChain.then(job, job);
-  _confirmChain = next.catch(()=>{});
-  return next;
-}
-function closeConfirmDialog(){
-  document.getElementById('confirm-overlay').classList.remove('open');
-}
-
-// ══════════════════════════════════════
-// JSONBin API
-// ══════════════════════════════════════
-// Bin作成はMaster Keyでのみ実行（作成後すぐ破棄）
-// BinはPrivateで作成し、以降はAccess Keyで読み書きする
-async function binCreateWithMasterKey(masterKey,data){
-  const r=await fetch(API,{method:'POST',
-    headers:{'Content-Type':'application/json','X-Master-Key':masterKey,'X-Bin-Name':'shopping-list','X-Bin-Private':'true'},
-    body:JSON.stringify({items:data,templates:[]})});
-  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error(`${r.status}: ${t}`);}
-  let j;
-  try{
-    j=await r.json();
-  }catch(e){
-    throw new Error('サーバーからの応答が不正な形式でした: '+e.message);
-  }
-  return j.metadata?.id||j.id;
-}
-// Access Key発行（Bins Read + Update のみ、Create/Deleteは付与しない）
-// 作成後、Master Keyはローカルから即座に破棄される
-async function createAccessKey(masterKey){
-  // Key名は最大32文字制限。Date.now()13桁+接頭辞で収める
-  const keyName='shoplist-'+Date.now();
-  const r=await fetch('https://api.jsonbin.io/v3/a',{method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'X-Master-Key':masterKey,
-      'X-Key-Name':keyName,
-    },
-    body:JSON.stringify({
-      bins:{read:true,update:true,create:false,delete:false},
-    })});
-  if(!r.ok){
-    const t=await r.text().catch(()=>'');
-    // 上限エラーを分かりやすく
-    if(r.status===400&&/3 access keys/i.test(t)){
-      throw new Error('Access Keyが上限（3個）に達しています。jsonbin.io のAPI Keysページで不要なキーを削除してください');
-    }
-    throw new Error(`AccessKey ${r.status}: ${t}`);
-  }
-  let j;
-  try{
-    j=await r.json();
-  }catch(e){
-    throw new Error('サーバーからの応答が不正な形式でした: '+e.message);
-  }
-  if(!j.accessKey) throw new Error('Access Keyの取得に失敗しました');
-  return j.accessKey;
-}
-// 同期エラー: HTTPステータスコード付き例外
-// status: HTTPステータス（0なら通信エラー／オフライン）
-// fatal: 自動リトライしても直らない種類か（401/403/404）
-class SyncError extends Error {
-  constructor(message, status, fatal){
-    super(message);
-    this.name='SyncError';
-    this.status=status;
-    this.fatal=fatal;
-  }
-}
-const isFatalStatus = s => s===401 || s===403 || s===404;
-
-// 以降の読み書きはAccess Keyを使用
-async function binGet(accessKey,binId){
-  let r;
-  try{
-    r=await fetch(`${API}/${binId}/latest`,{headers:{'X-Access-Key':accessKey}});
-  }catch(e){
-    // ネットワーク/CORS/オフライン: status=0
-    throw new SyncError('ネットワークエラー: '+e.message, 0, false);
-  }
-  if(!r.ok){
-    const body=await r.text().catch(()=>'');
-    throw new SyncError(`GET ${r.status}: ${body.slice(0,200)}`, r.status, isFatalStatus(r.status));
-  }
-  let j;
-  try{
-    j=await r.json();
-  }catch(e){
-    throw new SyncError('サーバーからの応答が不正な形式でした: '+e.message, r.status, false);
-  }
-  const rec=j.record||j;
-  return {items:sanitizeItems(rec.items), templates:sanitizeItems(rec.templates)};
-}
-async function binPut(accessKey,binId,items,templates){
-  let r;
-  try{
-    r=await fetch(`${API}/${binId}`,{method:'PUT',
-      headers:{'Content-Type':'application/json','X-Access-Key':accessKey},
-      body:JSON.stringify({items,templates})});
-  }catch(e){
-    throw new SyncError('ネットワークエラー: '+e.message, 0, false);
-  }
-  if(!r.ok){
-    const body=await r.text().catch(()=>'');
-    throw new SyncError(`PUT ${r.status}: ${body.slice(0,200)}`, r.status, isFatalStatus(r.status));
-  }
-}
-
-function encodeInvite(accessKey,binId){
-  return btoa(encodeURIComponent(JSON.stringify({k:accessKey,b:binId})));
-}
-function decodeInvite(code){
-  try{
-    const cleaned=code.trim().replace(/\s+/g,'');
-    const s=decodeURIComponent(atob(cleaned));
-    const o=JSON.parse(s);
-    if(typeof o.k==='string'&&typeof o.b==='string'&&o.k&&o.b)return o;
-  }catch(e){}
-  return null;
-}
-
-// ══════════════════════════════════════
-// Sync
-// ══════════════════════════════════════
-// 同期状態を一元管理して UI に反映
-// 副作用: dot色と sync モーダルの表示を更新
-function updateSyncUI(){
-  const color = {
-    idle:    '',
-    syncing: 'yellow',
-    ok:      'green',
-    offline: '',
-    error:   'yellow',  // 一時的エラーは syncing と同じ見た目（リトライ中）
-    fatal:   'red',
-  }[syncState.status] || '';
-  ['sync-dot','sync-dot-modal'].forEach(id=>{
-    const d=document.getElementById(id);
-    if(d)d.className='sync-dot'+(color?' '+color:'');
-  });
-  // syncモーダルが開いていたら status textも更新
-  const txt=document.getElementById('sync-status-text');
-  if(txt){
-    txt.textContent=statusToText(syncState);
-  }
-}
-
-function statusToText(s){
-  switch(s.status){
-    case 'idle':    return '⚪ 未接続';
-    case 'syncing': return '🟡 同期中…';
-    case 'ok':      return '🟢 同期済み';
-    case 'offline': return '📴 オフライン';
-    case 'error':   return `🟡 一時的エラー（再試行中）${s.lastErrorStatus?' - '+s.lastErrorStatus:''}`;
-    case 'fatal':   return `🔴 ${s.fatalReason||'同期できません'}`;
-    default:        return '';
-  }
-}
-
-function markSyncOk(){
-  syncState.status='ok';
-  syncState.fatalReason=null;
-  syncState.lastErrorStatus=null;
-  syncState.lastErrorMsg=null;
-  lastSyncAt=new Date();
-  updateSyncUI();
-}
-
-function markSyncError(err){
-  syncState.lastErrorStatus=err?.status??null;
-  syncState.lastErrorMsg=err?.message||String(err);
-  syncState.lastErrorAt=new Date();
-  if(err instanceof SyncError && err.fatal){
-    syncState.status='fatal';
-    syncState.fatalReason={
-      401:'認証エラー（Access Keyが無効）',
-      403:'権限不足（Access Keyに読み書き権限がありません）',
-      404:'部屋が見つかりません（Binが削除された可能性）',
-    }[err.status]||'致命的エラー';
-    // 致命エラー時は polling を停止（無駄打ち防止）
-    if(syncTimer){clearInterval(syncTimer);syncTimer=null;}
-  }else if(err?.status===0 || !navigator.onLine){
-    syncState.status='offline';
-    // オフラインは想定内なのでlogしない（spam防止）
-  }else{
-    syncState.status='error';
-  }
-  updateSyncUI();
-}
-
-// 致命的エラー時のバナー表示
-function showFatalBanner(err){
-  const b=document.getElementById('fatal-banner');
-  if(!b)return;
-  const titles={
-    401:'認証エラー',
-    403:'権限不足',
-    404:'部屋が見つかりません',
-  };
-  const msgs={
-    401:'Access Keyが無効化されています。再セットアップすると解決します。',
-    403:'Access Keyに必要な権限がありません。再セットアップしてください。',
-    404:'部屋（Bin）が削除されたか、IDが間違っています。招待コードで再参加するか、新しく部屋を作ってください。',
-  };
-  document.getElementById('fatal-banner-title').textContent=titles[err?.status]||'同期エラー';
-  document.getElementById('fatal-banner-msg').textContent=msgs[err?.status]||err?.message||'同期できません。';
-  b.style.display='block';
-}
-function dismissFatalBanner(){
-  const b=document.getElementById('fatal-banner');
-  if(b)b.style.display='none';
-}
-function reauthOpen(){
-  dismissFatalBanner();
-  teardownSync();
-  room={binId:null,apiKey:null,keyType:null};saveRoom();
-  syncItems=[];syncTemplates=[];saveData();
-  syncState.status='idle';syncState.fatalReason=null;
-  document.getElementById('setup-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
-  render();
-}
-
-// ── 同一端末での複数タブ対策 ──
-// 別タブでの変更（storage イベント）を検知して取り込む。
-// DATA_KEY: 既存のLWWマージ関数を再利用し、このタブの未反映の変更を失わずに反映
-// ROOM_KEY: 部屋の作成/参加/切り替えは同期エンジンの再構築が必要なため、安全のためリロードする
-window.addEventListener('storage', e=>{
-  if(e.key===DATA_KEY && e.newValue){
-    try{
-      const parsed=JSON.parse(e.newValue);
-      const otherItems=sanitizeItems(parsed?.items);
-      const otherTemplates=sanitizeItems(parsed?.templates);
-      syncItems=mergeItems(syncItems, otherItems);
-      syncTemplates=mergeTemplates(syncTemplates, otherTemplates);
-      saveData();
-      render();
-    }catch(err){/* 壊れたデータは無視 */}
-  }else if(e.key===ROOM_KEY){
-    // 部屋が変わると同期先が変わるため、その場でstateを継ぎ足すのではなく安全にリロードする
-    location.reload();
-  }
-});
-
-// ネットワーク状態の監視（オフライン→オンライン復帰時に自動再同期）
-window.addEventListener('online', ()=>{
-  if(!room.binId||!room.apiKey)return;
-  if(syncState.status==='fatal')return;
-  // オフラインから復帰 → 即 pull して最新同期
-  syncPull();
-});
-window.addEventListener('offline', ()=>{
-  syncState.status='offline';
-  updateSyncUI();
-});
-
-// 可視性の監視（タブが隠れている間はpollingを停止してバッテリーとrate limitを節約）
-// 表示に戻ったら即 pull して最新同期
-document.addEventListener('visibilitychange', ()=>{
-  if(!room.binId||!room.apiKey)return;
-  if(document.visibilityState==='hidden'){
-    // バックグラウンド → polling停止
-    if(syncTimer){clearInterval(syncTimer); syncTimer=null;}
-  }else{
-    // フォアグラウンド復帰
-    if(syncState.status==='fatal')return;
-    // 即座に pull
-    syncPull();
-    // polling再開（すでに動いていないことを確認してから）
-    if(!syncTimer){
-      syncTimer=setInterval(syncPull,SYNC_MS);
-    }
-  }
-});
-// 削除tombstoneの保持期間（30日）
-// この期間内はオフラインデバイスが復帰しても削除を正しく伝搬できる
-const TOMBSTONE_MS = 30 * 24 * 60 * 60 * 1000;
-
-// LWW (Last-Write-Wins) マージ
-// - Mapキーは文字列に強制（legacyの数値IDと新UUIDの混在対策）
-// - updatedAt が新しい方を採用
-// - updatedAt が同じ場合のみ削除を優先（競合時の安全側）
-function mergeItems(a,b){
-  const map=new Map();
-  const put=(i)=>{
-    const key=String(i.id);
-    const ex=map.get(key);
-    if(!ex){map.set(key,i);return;}
-    const aTs=i.updatedAt||0, bTs=ex.updatedAt||0;
-    if(aTs>bTs){map.set(key,i);return;}
-    if(aTs<bTs)return;
-    // 同時刻 → 削除を優先
-    if(i.deleted&&!ex.deleted) map.set(key,i);
-  };
-  b.forEach(put);
-  a.forEach(put);
-  // 30日より古いtombstoneのみ物理削除
-  const cut=Date.now()-TOMBSTONE_MS;
-  return [...map.values()].filter(i=>!(i.deleted&&(i.updatedAt||0)<cut));
-}
-// テンプレートもsoft-deleteで同期。items と同じロジック
-function mergeTemplates(a,b){
-  const map=new Map();
-  const put=(i)=>{
-    const key=String(i.id);
-    const ex=map.get(key);
-    if(!ex){map.set(key,i);return;}
-    const aTs=i.updatedAt||0, bTs=ex.updatedAt||0;
-    if(aTs>bTs){map.set(key,i);return;}
-    if(aTs<bTs)return;
-    if(i.deleted&&!ex.deleted) map.set(key,i);
-  };
-  b.forEach(put);
-  a.forEach(put);
-  const cut=Date.now()-TOMBSTONE_MS;
-  return [...map.values()].filter(i=>!(i.deleted&&(i.updatedAt||0)<cut));
-}
-// ── 同期ロック ──
-// pull と push を直列化してrace conditionを防ぐ
-// Promiseチェーンで全ての remote 操作を順番に実行する
-let _syncChain = Promise.resolve();
-function runExclusive(fn){
-  const next = _syncChain.then(fn, fn);
-  // チェーンが一度失敗してもその後の操作は続行させる
-  _syncChain = next.catch(()=>{});
-  return next;
-}
-
-async function syncPull(){
-  if(!room.binId||!room.apiKey)return;
-  // 致命的エラー状態ではそもそも試行しない（ユーザー操作で解決するまで）
-  if(syncState.status==='fatal')return;
-  // オフラインなら接続エラーで終わるだけなのでスキップ
-  if(!navigator.onLine){
-    syncState.status='offline';
-    updateSyncUI();
-    return;
-  }
-  // pullが予約されているならpending pushは一度キャンセル（pull→必要ならpushで統合）
-  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
-  return runExclusive(async()=>{
-    if(!room.binId||!room.apiKey)return;  // 途中でleaveされた場合
-    if(syncState.status==='fatal')return; // 実行順が来るまでに fatal 確定の可能性
-    syncState.status='syncing';
-    updateSyncUI();
-    try{
-      const remote=await binGet(room.apiKey,room.binId);
-      const remoteItems=remote.items;
-      const remoteTemplates=remote.templates;
-
-      const mergedItems=mergeItems(syncItems,remoteItems);
-      const mergedTemplates=mergeTemplates(syncTemplates,remoteTemplates);
-
-      const hasRemoteItemChanges=mergedItems.length!==syncItems.length||remoteItems.some(r=>{
-        const cur=syncItems.find(x=>sameId(x.id,r.id));
-        return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
-      });
-      const hasRemoteTemplateChanges=mergedTemplates.length!==syncTemplates.length||remoteTemplates.some(r=>{
-        const cur=syncTemplates.find(x=>sameId(x.id,r.id));
-        return !cur||(r.updatedAt||0)>(cur.updatedAt||0);
-      });
-
-      const rimapItems=new Map(remoteItems.map(i=>[String(i.id),i]));
-      const rimapTmpl=new Map(remoteTemplates.map(i=>[String(i.id),i]));
-      const needPush=
-        syncItems.some(i=>{const r=rimapItems.get(String(i.id));return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedItems.length!==remoteItems.length||
-        syncTemplates.some(i=>{const r=rimapTmpl.get(String(i.id));return !r||(i.updatedAt||0)>(r.updatedAt||0);})||mergedTemplates.length!==remoteTemplates.length;
-
-      syncItems=mergedItems;
-      syncTemplates=mergedTemplates;
-      saveData();  // merge結果をローカルキャッシュに保存
-      if(hasRemoteItemChanges||hasRemoteTemplateChanges)render();
-      // 同じlock内でPUTするのでrace condition無し
-      if(needPush)await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
-      markSyncOk();
-    }catch(e){
-      markSyncError(e);
-      // 致命エラーはバナー表示でユーザーに通知
-      if(e instanceof SyncError && e.fatal){
-        showFatalBanner(e);
-      }
-    }finally{
-      // 初回pullの試行が終わったら「読み込み中」表示を終了（成功/失敗問わず）
-      if(isInitialSync){ isInitialSync=false; render(); }
-    }
-  });
-}
-
-// push デバウンス: 700ms無操作で lock 取ってPUT
-// ローカルにも即座に保存（オフライン起動時でも直近の状態を復元できる）
-function schedulePush(){
-  saveData();  // ローカル保存は即時（次回起動時用のバックアップ）
-  clearTimeout(pushTimer);
-  pushTimer=setTimeout(()=>{
-    pushTimer=null;
-    runExclusive(async()=>{
-      if(!room.binId||!room.apiKey)return;
-      if(syncState.status==='fatal')return;
-      try{
-        await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
-        markSyncOk();
-      }catch(e){
-        markSyncError(e);
-        if(e instanceof SyncError && e.fatal){
-          showFatalBanner(e);
-        }
-      }
-    });
-  },700);
-}
-// 同期の全停止: timer, pending push, room情報
-// 呼び出し後は「新しい部屋が設定されるまで」同期が一切走らない
-function teardownSync(){
-  clearInterval(syncTimer); syncTimer=null;
-  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
-  // in-flightなPUT/GETはキャンセルできないが、完了時に room が null のためguardで弾かれる
-  // (binPut/binGet自体は成功しても、完了後のstate更新時にroom=nullなら何もしない)
-  syncState.status='idle';
-  syncState.fatalReason=null;
-  dismissFatalBanner();
-  updateSyncUI();
-}
-
-function startSync(){
-  clearInterval(syncTimer);
-  // ローカルにキャッシュが無い状態での起動は「初回同期中」として扱う
-  isInitialSync = (syncItems.length===0 && syncTemplates.length===0);
-  // 新セッション開始 → 前回のエラー状態をクリア
-  syncState.status='idle';
-  syncState.fatalReason=null;
-  syncState.lastErrorStatus=null;
-  syncState.lastErrorMsg=null;
-  dismissFatalBanner();
-  updateSyncUI();
-  syncTimer=setInterval(syncPull,SYNC_MS);
-  syncPull();
-}
-
-// 旧データ移行：syncItemsにfrequent:trueがあればsyncTemplatesに移す
-function migrateFrequentItems(){
-  const freqItems=syncItems.filter(i=>!i.deleted&&i.frequent);
-  if(!freqItems.length)return false;
-  let changed=false;
-  freqItems.forEach(item=>{
-    const already=syncTemplates.some(t=>!t.deleted&&t.name===item.name);
-    if(!already){
-      const {done,deleted,createdAt,...rest}=item;
-      syncTemplates.push({id:'tmpl-migrated-'+item.id,...rest,updatedAt:Date.now()});
-      changed=true;
-    }
-    // syncItemsからfrequentフラグを除去
-    syncItems=syncItems.map(i=>sameId(i.id,item.id)?{...i,frequent:undefined}:i);
-  });
-  return changed;
-}
-
-// ══════════════════════════════════════
-// Setup
-// ══════════════════════════════════════
-function showSetupError(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display=msg?'block':'none';}
-function closeSetup(){document.getElementById('setup-overlay').classList.remove('open');document.body.style.overflow='';}
-
-async function createRoom(){
-  const masterKeyInput=document.getElementById('master-key-input');
-  let masterKey=masterKeyInput.value.trim();
-  if(!masterKey){showSetupError('create-error','Master Keyを入力してください');return;}
-  const btn=document.getElementById('create-btn');
-  btn.disabled=true;btn.textContent='作成中…';showSetupError('create-error','');
-  try{
-    // 1. Bin作成（Private）
-    btn.textContent='部屋を作成中…';
-    const binId=await binCreateWithMasterKey(masterKey,[]);
-    // 2. Access Key発行（この部屋専用、読み書きのみ可）
-    btn.textContent='権限を設定中…';
-    let accessKey;
-    try{
-      accessKey=await createAccessKey(masterKey);
-    }catch(e){
-      // Access Key発行に失敗した場合でも、Master Keyを保存せず中断
-      masterKey='';
-      masterKeyInput.value='';
-      throw new Error('Access Keyの発行に失敗しました（3個上限の可能性。jsonbin.ioのAPI Keys画面で古いキーを削除してください）:\n'+e.message);
-    }
-    // 3. Master Keyを即座に破棄（メモリからもDOMからも）
-    masterKey='';
-    masterKeyInput.value='';
-    // 4. 以降はAccess Keyのみで動作
-    room={binId,apiKey:accessKey,keyType:'access'};saveRoom();closeSetup();startSync();
-    showToast('✅ 部屋を作りました！招待コードを家族に送ってください');
-  }catch(e){
-    showSetupError('create-error','作成に失敗しました。\n（'+e.message+'）');
-    btn.disabled=false;btn.textContent='部屋を作る';
-  }
-}
-async function joinRoom(btn){
-  const raw=document.getElementById('invite-code-input').value.trim();
-  if(!raw){showSetupError('join-error','招待コードを入力してください');return;}
-  const obj=decodeInvite(raw);
-  if(!obj){showSetupError('join-error','招待コードが正しくありません');return;}
-  showSetupError('join-error','');
-  btn.disabled=true;btn.textContent='接続中…';
-  try{
-    const data=await binGet(obj.k,obj.b);
-    room={binId:obj.b,apiKey:obj.k,keyType:'access'};saveRoom();
-    syncItems=data.items; syncTemplates=data.templates;saveData();
-    closeSetup();startSync();showToast('✅ 部屋に参加しました');render();
-  }catch(e){
-    showSetupError('join-error','接続に失敗しました。\n（'+e.message+'）');
-    btn.disabled=false;btn.textContent='参加する';
-  }
-}
-async function confirmLeaveRoom(){
-  const ok=await showConfirm('部屋を切り替える','現在の部屋から離れます。\nデータはサーバーに残ります。','切り替える','primary');
-  if(!ok)return;
-  teardownSync();
-  room={binId:null,apiKey:null,keyType:null};saveRoom();syncItems=[];syncTemplates=[];saveData();
-  closeSyncModal();render();
-  document.getElementById('setup-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-
-async function resetAllData(){
-  const ok=await showConfirm('リストを全件削除','リストと「よく買うもの」をすべて削除します。\nこの操作は元に戻せません。','全削除');
-  if(!ok)return;
-  closeSyncModal();
-  // 保留中のpushはキャンセル
-  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
-  if(room.binId&&room.apiKey){
-    // lock内で「空にする → PUT」を atomic に実行
-    // これをしないと、lock待ち中のsyncPullがサーバーから旧データを引っ張ってきて復活する
-    await runExclusive(async()=>{
-      syncItems=[];syncTemplates=[];saveData();
-      render();
-      try{
-        await binPut(room.apiKey,room.binId,[],[]);
-        markSyncOk();
-      }catch(e){
-        markSyncError(e);
-        if(e instanceof SyncError && e.fatal) showFatalBanner(e);
-      }
-    });
-  }else{
-    // ローカルのみのクリア
-    syncItems=[];syncTemplates=[];saveData();
-    render();
-  }
-  haptic('heavy');showToast('🗑️ すべて削除しました');
-}
-
-// ══════════════════════════════════════
-// Sync modal
-// ══════════════════════════════════════
-function openSyncModal(){
-  const code=room.binId&&room.apiKey?encodeInvite(room.apiKey,room.binId):'（未設定）';
-  document.getElementById('sync-code-display').textContent=code;
-  document.getElementById('sync-status-text').textContent=statusToText(syncState);
-  const t=lastSyncAt;
-  document.getElementById('sync-last-time').textContent=
-    t?`最終同期: ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}:${t.getSeconds().toString().padStart(2,'0')}`:'';
-  document.getElementById('sync-modal').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-function closeSyncModal(){document.getElementById('sync-modal').classList.remove('open');document.body.style.overflow='';}
-function copyInviteCode(){
-  navigator.clipboard?.writeText(document.getElementById('sync-code-display').textContent)
-    .then(()=>showToast('📋 招待コードをコピーしました')).catch(()=>{});haptic();
-}
-function shareInviteCode(){
-  const code=document.getElementById('sync-code-display').textContent;
-  const msg=`買い物リストの招待コードです 🛒\n\nアプリを開いて「招待コードで参加」に貼り付けてください👇\n${code}`;
-  if(navigator.share)navigator.share({text:msg}).catch(()=>{});
-  else navigator.clipboard?.writeText(msg).then(()=>showToast('📋 クリップボードにコピーしました'));
-  haptic();
-}
-
-// ══════════════════════════════════════
-// Add/Edit modal
-// ══════════════════════════════════════
-let editId=null, editTemplateId=null, currentCat=null, currentShop='super', currentPerson=null, currentQty=1, currentUnit='個';
-// モーダルの追加/編集/削除ボタン連打による二重実行防止フラグ
-let modalBusy=false;
-
-function openAddModal(){
-  editId=null;editTemplateId=null;modalBusy=false;currentCat=null;currentShop='super';currentPerson='both';currentQty=1;currentUnit='個';
-  document.getElementById('modal-title').textContent='商品を追加';
-  ['inp-name','inp-price','inp-note'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('inp-frequent').checked=false;
-  document.getElementById('inp-frequent-row').style.display='';
-  document.getElementById('cat-select-label').textContent='選択してください';
-  document.getElementById('cat-select-label').style.color='var(--c-sub)';
-  document.getElementById('modal-delete').style.display='none';
-  document.getElementById('modal-submit').textContent='追加する';
-  renderPersonSeg();renderShopSeg();renderQty();renderUnits();
-  document.getElementById('modal').classList.add('open');
-  document.body.style.overflow='hidden';
-  setTimeout(()=>document.getElementById('inp-name').focus(),300);
-}
-function openEditModal(id){
-  const item=syncItems.find(i=>sameId(i.id,id));if(!item)return;
-  editId=id;editTemplateId=null;modalBusy=false;currentCat=item.category;currentShop=item.shop||'super';currentPerson=item.person||null;
-  currentQty=Math.min(99,Math.max(1,Number(item.qty)||1));
-  currentUnit=item.unit||'個';
-  document.getElementById('modal-title').textContent='商品を編集';
-  document.getElementById('inp-name').value=item.name;
-  document.getElementById('inp-price').value=item.price||'';
-  document.getElementById('inp-note').value=item.note||'';
-  document.getElementById('inp-frequent-row').style.display='';
-  document.getElementById('inp-frequent').checked=syncTemplates.some(t=>!t.deleted&&t.name===item.name);
-  const c=CAT_MAP[currentCat];
-  document.getElementById('cat-select-label').textContent=c?`${c.icon} ${c.label}`:'選択してください';
-  document.getElementById('cat-select-label').style.color=c?'var(--c-text)':'var(--c-sub)';
-  document.getElementById('modal-delete').style.display='block';
-  document.getElementById('modal-submit').textContent='保存する';
-  renderPersonSeg();renderShopSeg();renderQty();renderUnits();
-  document.getElementById('modal').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-// 「よく買うもの」を直接編集する（アイテムを経由せずテンプレートを書き換える）
-function openEditTemplateModal(id){
-  const tmpl=syncTemplates.find(t=>sameId(t.id,id)&&!t.deleted);if(!tmpl)return;
-  editId=null;editTemplateId=id;modalBusy=false;currentCat=tmpl.category;currentShop=tmpl.shop||'super';currentPerson=tmpl.person||null;
-  currentQty=Math.min(99,Math.max(1,Number(tmpl.qty)||1));
-  currentUnit=tmpl.unit||'個';
-  document.getElementById('modal-title').textContent='よく買うものを編集';
-  document.getElementById('inp-name').value=tmpl.name;
-  document.getElementById('inp-price').value=tmpl.price||'';
-  document.getElementById('inp-note').value=tmpl.note||'';
-  // テンプレート編集画面では「登録」チェックは常にON扱いなので隠す
-  document.getElementById('inp-frequent-row').style.display='none';
-  document.getElementById('inp-frequent').checked=true;
-  const c=CAT_MAP[currentCat];
-  document.getElementById('cat-select-label').textContent=c?`${c.icon} ${c.label}`:'選択してください';
-  document.getElementById('cat-select-label').style.color=c?'var(--c-text)':'var(--c-sub)';
-  document.getElementById('modal-delete').style.display='block';
-  document.getElementById('modal-submit').textContent='保存する';
-  renderPersonSeg();renderShopSeg();renderQty();renderUnits();
-  document.getElementById('modal').classList.add('open');
-  document.body.style.overflow='hidden';
-  setTimeout(()=>document.getElementById('inp-name').focus(),300);
-}
-function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow='';editTemplateId=null;}
-
-// ── ボトムシート下スワイプで閉じる ──
-// 改善点:
-// - input/textarea/selectへのタッチでは発動しない（フォーム操作との競合回避）
-// - 最初の数pxの移動で「下スワイプ」を確定。横方向優位や上方向は無視
-// - modal-body内でスクロール可能な状態なら無効化
-function enableSheetSwipeClose(sheetEl, closeFn){
-  const DIR_THRESHOLD = 10;   // 方向判定に入る移動量
-  const DISMISS_THRESHOLD = 180; // スワイプ閉じを発火する下移動量
-  let sx=0, sy=0, dx=0, dy=0, phase='none'; // none | v(下スワイプ) | ignored
-  const bodyEl=sheetEl.querySelector('.modal-body');
-  let activeTouchId=null;
-
-  sheetEl.addEventListener('touchstart',e=>{
-    if(e.touches.length>1){phase='ignored';return;}
-    const target=e.target;
-    // フォーム要素から始まったジェスチャーは無視
-    if(target && target.closest && target.closest('input,textarea,select,button')){
-      phase='ignored'; return;
-    }
-    const t=e.touches[0];
-    activeTouchId=t.identifier;
-    sx=t.clientX; sy=t.clientY; dx=0; dy=0;
-    // modal-body内でscrollTop>0ならそもそも無効
-    if(bodyEl && bodyEl.scrollTop>0){phase='ignored';return;}
-    phase='none';
-  },{passive:true});
-
-  sheetEl.addEventListener('touchmove',e=>{
-    if(phase==='ignored')return;
-    let t=null;
-    for(const tt of e.touches){if(tt.identifier===activeTouchId){t=tt;break;}}
-    if(!t)return;
-    dx=t.clientX-sx;
-    dy=t.clientY-sy;
-
-    if(phase==='none'){
-      const adx=Math.abs(dx), ady=Math.abs(dy);
-      if(adx<DIR_THRESHOLD && ady<DIR_THRESHOLD) return;
-      // 下方向かつ縦優位
-      if(dy>0 && ady>adx*1.2){
-        // modal-bodyでこれ以上スクロールできない（scrollTop===0）ことを再確認
-        if(bodyEl && bodyEl.scrollTop>0){phase='ignored';return;}
-        phase='v';
-      }else{
-        phase='ignored';
-        return;
-      }
-    }
-
-    if(phase==='v'){
-      if(dy>0) sheetEl.style.transform=`translateY(${Math.min(dy,400)}px)`;
-      else sheetEl.style.transform='';
-    }
-  },{passive:true});
-
-  sheetEl.addEventListener('touchend',()=>{
-    if(phase==='v' && dy>DISMISS_THRESHOLD){
-      sheetEl.style.transition='transform 0.22s ease';
-      sheetEl.style.transform='translateY(100%)';
-      setTimeout(()=>{ sheetEl.style.transition=''; sheetEl.style.transform=''; closeFn(); },220);
-    }else{
-      sheetEl.style.transition='transform 0.2s ease';
-      sheetEl.style.transform='';
-      setTimeout(()=>sheetEl.style.transition='',200);
-    }
-    dx=0; dy=0; phase='none'; activeTouchId=null;
-  });
-
-  sheetEl.addEventListener('touchcancel',()=>{
-    sheetEl.style.transform='';
-    dx=0; dy=0; phase='none'; activeTouchId=null;
-  });
-}
-
-function renderPersonSeg(){
-  const opts=[...PERSONS];
-  document.getElementById('person-seg').innerHTML=opts.map(p=>
-    `<button class="seg-btn tappable ${p.id===currentPerson?'active':''}"
-      onclick="selectPerson(${p.id===null?'null':`'${p.id}'`});haptic()">
-      ${p.icon} ${p.label}</button>`).join('');
-}
-function selectPerson(id){currentPerson=id;renderPersonSeg();}
-function renderShopSeg(){
-  document.getElementById('shop-seg').innerHTML=SHOPS.map(s=>
-    `<button class="seg-btn tappable ${s.id===currentShop?'active':''}" onclick="selectShop('${s.id}');haptic()">
-      ${s.icon} ${s.label}</button>`).join('');
-}
-function selectShop(id){currentShop=id;renderShopSeg();}
-function renderQty(){document.getElementById('qty-val').textContent=currentQty;}
-function changeQty(d){currentQty=Math.min(99,Math.max(1,currentQty+d));renderQty();haptic();}
-function renderUnits(){
-  document.getElementById('unit-row').innerHTML=UNITS.map(u=>
-    `<button class="unit-btn tappable ${u===currentUnit?'active':''}" onclick="selectUnit('${u}');haptic()">${u}</button>`).join('');
-}
-function selectUnit(u){currentUnit=u;renderUnits();}
-
-function openCatSheet(){
-  document.getElementById('cat-options').innerHTML=CATEGORIES.map(c=>
-    `<button class="cat-option tappable" onclick="pickCat('${c.id}')">
-      <span>${c.icon} ${c.label}</span>
-      ${currentCat===c.id?'<span style="color:var(--c-primary);">✓</span>':''}
-    </button>`).join('');
-  document.getElementById('cat-sheet').classList.add('open');
-}
-function closeCatSheet(){document.getElementById('cat-sheet').classList.remove('open');}
-function pickCat(id){
-  currentCat=id;const c=CAT_MAP[id];
-  document.getElementById('cat-select-label').textContent=`${c.icon} ${c.label}`;
-  document.getElementById('cat-select-label').style.color='var(--c-text)';
-  closeCatSheet();haptic();
-}
-
-// 価格入力の厳密パース
-// - 空文字・ゴミ・負の値・小数 → 0
-// - 上限99999を超えたら99999にクランプ
-// - 小数は切り捨て
-function parsePrice(raw){
-  const s=String(raw||'').trim();
-  if(!s)return 0;
-  // 数値以外が混入していたら0扱い（"198abc"のような入力を拒否）
-  if(!/^-?\d+(\.\d+)?$/.test(s))return 0;
-  const n=Number(s);
-  if(!Number.isFinite(n))return 0;
-  const floored=Math.floor(n);
-  if(floored<=0)return 0;
-  if(floored>99999)return 99999;
-  return floored;
-}
-
-// ══════════════════════════════════════
-// CRUD
-// ══════════════════════════════════════
-// 重複チェック付きで新規アイテムを追加する共通処理。
-// 「未購入」の同名アイテムが既にあれば、数量をまとめるか別に追加するか確認する。
-// 商品名の比較は表記ゆれ対策で大文字小文字を区別しない。
-async function addItemWithDupCheck(patch){
-  const nameLower=patch.name.toLowerCase();
-  const dup=syncItems.find(i=>!i.deleted&&!i.done&&i.name.toLowerCase()===nameLower);
-  if(dup){
-    const ok=await showConfirm('すでにリストにあります',
-      `「${patch.name}」は未購入のリストに既にあります。\n数量をまとめますか？`,
-      '数量をまとめる','primary');
-    if(ok){
-      // 確認待ちの間に他端末の同期で状態が変わっている可能性があるため、最新の値を取り直す
-      const latest=syncItems.find(i=>sameId(i.id,dup.id));
-      if(!latest || latest.deleted){
-        // 確認中に削除されていた場合は通常どおり新規追加にフォールバック
-        const id=newId('itm-');
-        syncItems.push({id,done:false,deleted:false,createdAt:Date.now(),...patch});
-        showToast(`✅ ${patch.name} を追加しました`);
-        return id;
-      }
-      const mergedQty=Math.min(99999,(Number(latest.qty)||1)+(Number(patch.qty)||1));
-      syncItems=syncItems.map(i=>sameId(i.id,dup.id)?{...i,qty:mergedQty,updatedAt:Date.now()}:i);
-      showToast(`🔗 数量を ${mergedQty}${latest.unit||patch.unit||'個'} にまとめました`);
-      return dup.id;
-    }
-  }
-  const id=newId('itm-');
-  syncItems.push({id,done:false,deleted:false,createdAt:Date.now(),...patch});
-  showToast(`✅ ${patch.name} を追加しました`);
-  return id;
-}
-
-async function submitItem(){
-  if(modalBusy)return; // 連打による二重実行を防止
-  const name=document.getElementById('inp-name').value.trim();
-  if(!name){const i=document.getElementById('inp-name');i.style.borderColor='var(--c-danger)';i.focus();return;}
-  document.getElementById('inp-name').style.borderColor='var(--c-border)';
-  modalBusy=true;
-  const submitBtn=document.getElementById('modal-submit');
-  if(submitBtn)submitBtn.disabled=true;
-  try{
-    const now=Date.now();
-    const isFrequent=document.getElementById('inp-frequent').checked;
-    const patch={name,shop:currentShop,person:currentPerson,category:currentCat||'other',qty:currentQty,unit:currentUnit,
-      price:parsePrice(document.getElementById('inp-price').value),
-      note:document.getElementById('inp-note').value.trim(),updatedAt:now};
-
-    // 「よく買うもの」を直接編集している場合はテンプレートだけを更新して終了
-    if(editTemplateId){
-      // 他の（自分以外の）テンプレートと同名にならないようチェック
-      const nameLower=name.toLowerCase();
-      const dupTmpl=syncTemplates.find(t=>!t.deleted && !sameId(t.id,editTemplateId) && t.name.toLowerCase()===nameLower);
-      if(dupTmpl){
-        showToast(`⚠️ 「${name}」は既に登録されています`);
-        return;
-      }
-      const exists=syncTemplates.some(t=>sameId(t.id,editTemplateId)&&!t.deleted);
-      if(exists){
-        syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,...patch,deleted:false}:t);
-        showToast('✏️ 更新しました');
-      }else{
-        // 編集中に他デバイスで削除された場合: 新しいIDで復活登録
-        syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
-        showToast('✅ 登録しました（削除されていたため新規登録）');
-      }
-      haptic();schedulePush();closeModal();render();
-      return;
-    }
-
-    if(editId){
-      const exists = syncItems.some(i=>sameId(i.id,editId) && !i.deleted);
-      if(exists){
-        syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,...patch}:i);
-        showToast('✏️ 更新しました');
-      }else{
-        // 編集中に他デバイスで削除された場合: 新しいIDで復活追加
-        syncItems.push({id:newId('itm-'),done:false,deleted:false,createdAt:now,...patch});
-        showToast('✅ 追加しました（削除されていたため新規登録）');
-      }
-    }else{
-      await addItemWithDupCheck(patch);
-    }
-
-    // よく買うもの登録：テンプレートに独立して保存（名前で重複排除、大文字小文字は区別しない）
-    // 既に同名のテンプレートがあれば更新（tombstoneなら復活）。
-    if(isFrequent){
-      const nameLower=name.toLowerCase();
-      const existing=syncTemplates.find(t=>t.name.toLowerCase()===nameLower);
-      if(existing){
-        syncTemplates=syncTemplates.map(t=>t.id===existing.id?{...t,...patch,id:t.id,deleted:false}:t);
-      }else{
-        syncTemplates.push({id:newId('tmpl-'),deleted:false,...patch});
-      }
-    }
-
-    haptic();schedulePush();closeModal();render();
-  }finally{
-    modalBusy=false;
-    if(submitBtn)submitBtn.disabled=false;
-  }
-}
-
-async function deleteCurrentItem(){
-  if(modalBusy)return; // 連打による二重実行を防止
-  modalBusy=true;
-  const delBtn=document.getElementById('modal-delete');
-  if(delBtn)delBtn.disabled=true;
-  try{
-    if(editTemplateId){
-      const tmpl=syncTemplates.find(t=>sameId(t.id,editTemplateId));
-      if(!tmpl || tmpl.deleted){
-        closeModal();
-        showToast('すでに削除されています');
-        return;
-      }
-      const ok=await showConfirm('よく買うものから削除',`「${tmpl.name}」を削除しますか？`);
-      if(!ok)return;
-      syncTemplates=syncTemplates.map(t=>sameId(t.id,editTemplateId)?{...t,deleted:true,updatedAt:Date.now()}:t);
-      haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
-      return;
-    }
-    const item=syncItems.find(i=>sameId(i.id,editId));
-    if(!item || item.deleted){
-      // 既に削除されている/見つからない → モーダル閉じるだけ
-      closeModal();
-      showToast('すでに削除されています');
-      return;
-    }
-    const ok=await showConfirm('商品を削除',`「${item.name}」を削除しますか？`);
-    if(!ok)return;
-    syncItems=syncItems.map(i=>sameId(i.id,editId)?{...i,deleted:true,updatedAt:Date.now()}:i);
-    haptic('heavy');schedulePush();closeModal();render();showToast('🗑️ 削除しました');
-  }finally{
-    modalBusy=false;
-    if(delBtn)delBtn.disabled=false;
-  }
-}
-
-function toggleDone(id){
-  const before=syncItems.find(i=>sameId(i.id,id));
-  if(!before || before.deleted)return;
-  // アニメーション中は操作を受け付けない（戻せなくなるバグ対策）
-  const existingCard=document.getElementById(`item-inner-${id}`)?.closest('.item-card');
-  if(existingCard?.dataset.animating==='1')return;
-  const nextDone=!before.done;
-  syncItems=syncItems.map(i=>sameId(i.id,id)?{...i,done:nextDone,updatedAt:Date.now()}:i);
-  haptic();
-  schedulePush();
-
-  const filter=local.filter||'todo';
-  // ── フィルタで消える場合: フェードアウトしてから該当要素だけ削除 ──
-  const willBeHiddenByFilter =
-    (filter==='todo' && nextDone) ||
-    (filter==='done' && !nextDone);
-
-  if(willBeHiddenByFilter){
-    const innerEl=document.getElementById(`item-inner-${id}`);
-    const cardEl=innerEl?.closest('.item-card');
-    if(cardEl){
-      cardEl.dataset.animating='1';  // 連打ロック
-      cardEl.style.transition='opacity 0.2s ease, max-height 0.25s ease, margin 0.25s ease, padding 0.25s ease';
-      cardEl.style.maxHeight=cardEl.offsetHeight+'px';
-      // 次フレームで縮める
-      requestAnimationFrame(()=>{
-        cardEl.style.opacity='0';
-        cardEl.style.maxHeight='0';
-        cardEl.style.marginTop='0';
-        cardEl.style.marginBottom='0';
-        cardEl.style.paddingTop='0';
-        cardEl.style.paddingBottom='0';
-      });
-      setTimeout(()=>{
-        // 該当グループ内の他のアイテムを確認。残り0件ならグループごと再描画
-        const parent=cardEl.parentElement;
-        cardEl.remove();
-        const remainingCards=parent?.querySelectorAll('.item-card').length||0;
-        if(remainingCards===0){
-          // グループが空になった → 再描画でグループヘッダーも消す
-          renderList();
-        }else{
-          // shop-countの更新 & サマリー更新
-          refreshGroupCounts();
-          renderSummary();
-          renderBadge();
-        }
-      },300);
-      return;
-    }
-    // DOM要素が見つからない場合は全再描画にフォールバック
-    render();
-    return;
-  }
-
-  // ── 'all' フィルタ: 該当アイテムのみDOM部分更新 ──
-  applyToggleDoneDOM(id, nextDone);
-  renderSummary();
-  renderBadge();
-}
-
-// 該当アイテムの DOM 表示を done/undone に部分更新
-function applyToggleDoneDOM(id, done){
-  const innerEl=document.getElementById(`item-inner-${id}`);
-  const cardEl=innerEl?.closest('.item-card');
-  if(!cardEl)return;
-  const checkBtn=cardEl.querySelector('.check-btn');
-  if(done){
-    cardEl.classList.add('done');
-    checkBtn?.classList.add('checked');
-    if(checkBtn)checkBtn.textContent='✓';
-  }else{
-    cardEl.classList.remove('done');
-    checkBtn?.classList.remove('checked');
-    if(checkBtn)checkBtn.textContent='';
-  }
-}
-
-// グループヘッダーのカウント・合計金額を syncItems から再計算して書き換え
-function refreshGroupCounts(){
-  const filter=local.filter||'todo';
-  const active=syncItems.filter(i=>!i.deleted);
-  const items = filter==='todo' ? active.filter(i=>!i.done)
-              : filter==='done' ? active.filter(i=>i.done)
-              : active;
-
-  PERSONS.forEach(pg=>{
-    const pgItems=items.filter(i=>(i.person||'both')===pg.id);
-    const pgKey='person-'+pg.id;
-    const head=document.querySelector(`[onclick*="toggleShop('${pgKey}')"]`);
-    if(!head)return;
-    const count=head.querySelector('.shop-count');
-    const priceEl=head.querySelector('.shop-price');
-    if(count)count.textContent=pgItems.length;
-    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-    if(priceEl){
-      if(pgPrice>0){priceEl.textContent='¥'+pgPrice.toLocaleString();priceEl.style.display='';}
-      else priceEl.style.display='none';
-    }
-    SHOPS.forEach(shop=>{
-      const shopItems=pgItems.filter(i=>(i.shop||'super')===shop.id);
-      const shopKey=pgKey+'-'+shop.id;
-      const shead=document.querySelector(`[onclick*="toggleShop('${shopKey}')"]`);
-      if(!shead)return;
-      const scount=shead.querySelector('.shop-count');
-      const spriceEl=shead.querySelector('.shop-price');
-      if(scount)scount.textContent=shopItems.length;
-      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-      if(spriceEl){
-        if(shopPrice>0){spriceEl.textContent='¥'+shopPrice.toLocaleString();spriceEl.style.display='';}
-        else spriceEl.style.display='none';
-      }
-    });
-  });
-}
-
-async function clearDone(){
-  const count=syncItems.filter(i=>!i.deleted&&i.done).length;
-  if(!count){showToast('購入済みの商品はありません');return;}
-  const ok=await showConfirm('購入済みをクリア',`購入済みの ${count} 件を削除しますか？`,'削除');
-  if(!ok)return;
-  const now=Date.now();
-  syncItems=syncItems.map(i=>(!i.deleted&&i.done)?{...i,deleted:true,updatedAt:now}:i);
-  haptic('heavy');
-  render(); // 即座にUI更新
-  // 保留中のpushはキャンセル（lock経由で即PUTするため）
-  if(pushTimer){clearTimeout(pushTimer); pushTimer=null;}
-  if(room.binId&&room.apiKey){
-    await runExclusive(async()=>{
-      try{
-        await binPut(room.apiKey,room.binId,syncItems,syncTemplates);
-        markSyncOk();
-      }catch(e){
-        markSyncError(e);
-        if(e instanceof SyncError && e.fatal) showFatalBanner(e);
-      }
-    });
-  }
-  showToast(`🗑️ ${count}件 クリアしました`);
-}
-
-async function addFromFrequent(templateId){
-  const src=syncTemplates.find(t=>sameId(t.id,templateId)&&!t.deleted);if(!src)return;
-  const now=Date.now();
-  await addItemWithDupCheck({
-    name:src.name,shop:src.shop||'super',person:src.person||null,category:src.category,
-    qty:src.qty,unit:src.unit,price:src.price,note:src.note,updatedAt:now});
-  schedulePush();showPage('list');
-}
-
-// Swipe delete
-// スワイプ削除
-// 状態遷移: 'none'(触れたばかり) → 'h'(横スワイプ確定) or 'v'(縦スクロール確定・無視)
-// 判定: 最初の有意な移動(12px以上)で |dx| > |dy| * 1.5 なら横、それ以外は縦
-function enableSwipe(el,id){
-  const DIR_THRESHOLD = 12;   // 方向判定に入る移動量
-  const DELETE_THRESHOLD = 65; // 削除発火する横移動量
-  const MAX_PULL = 80;
-  let sx=0, sy=0, dx=0, dy=0, phase='none';
-  let activeTouchId=null;
-
-  el.addEventListener('touchstart',e=>{
-    if(e.touches.length>1){phase='v';return;}  // 複数指は無視
-    const t=e.touches[0];
-    activeTouchId=t.identifier;
-    sx=t.clientX; sy=t.clientY; dx=0; dy=0; phase='none';
-  },{passive:true});
-
-  el.addEventListener('touchmove',e=>{
-    if(phase==='v')return;  // 縦スクロール確定 → 何もしない
-    // 対象のtouchを見つける（複数指が途中で加わっても元のtouchを追う）
-    let t=null;
-    for(const tt of e.touches){if(tt.identifier===activeTouchId){t=tt;break;}}
-    if(!t)return;
-    dx=t.clientX-sx;
-    dy=t.clientY-sy;
-
-    if(phase==='none'){
-      // 方向判定: 有意な移動があるまでは待つ
-      const adx=Math.abs(dx), ady=Math.abs(dy);
-      if(adx<DIR_THRESHOLD && ady<DIR_THRESHOLD) return;
-      // 左向き かつ 横優位 → 横スワイプ確定
-      if(dx<0 && adx>ady*1.5){
-        phase='h';
-      }else{
-        phase='v';
-        return;
-      }
-    }
-
-    // phase==='h' → カード追従
-    if(dx<0){
-      el.style.transform=`translateX(${Math.max(dx,-MAX_PULL)}px)`;
-    }else{
-      el.style.transform='';
-    }
-  },{passive:true});
-
-  el.addEventListener('touchend',async()=>{
-    if(phase==='h' && dx<-DELETE_THRESHOLD){
-      const item=syncItems.find(i=>sameId(i.id,id));
-      const ok=await showConfirm('商品を削除',`「${item?.name}」を削除しますか？`);
-      if(ok){
-        syncItems=syncItems.map(i=>sameId(i.id,id)?{...i,deleted:true,updatedAt:Date.now()}:i);
-        haptic('heavy');schedulePush();render();showToast('🗑️ 削除しました');
-      }else{
-        el.style.transform='';
-      }
-    }else{
-      el.style.transform='';
-    }
-    dx=0;dy=0;phase='none';activeTouchId=null;
-  });
-
-  // 途中で指が離れずにキャンセルされた場合（システム割り込み等）
-  el.addEventListener('touchcancel',()=>{
-    el.style.transform='';
-    dx=0;dy=0;phase='none';activeTouchId=null;
-  });
-}
-
-// ══════════════════════════════════════
-// Render
-// ══════════════════════════════════════
+/* ===== 描画 ===== */
 function render(){
-  // 表示中のビューのみ再描画（非表示のビューはスキップ）
-  const currentPage = document.querySelector('.page.active')?.id;
-  if(currentPage === 'page-list' || !currentPage) renderList();
-  if(currentPage === 'page-freq') renderFrequent();
-  renderBadge();
+  renderSugg();
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  $('#addArea').style.display=tab==='list'?'block':'none';
+  $('#main').innerHTML=tab==='list'?listView():favView();
+  bindRows();
 }
-
-// サマリーバー（残り/合計/残り予算）だけを軽量更新
-// toggleDone の部分更新時に呼び出す
-function renderSummary(){
-  const active=syncItems.filter(i=>!i.deleted);
-  const todo=active.filter(i=>!i.done).length;
-  const sumPrice=(filter)=>active.filter(filter).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-  const priceTodo=sumPrice(i=>!i.done&&i.price);
-  const priceAll=sumPrice(i=>i.price);
-  const el=document.getElementById('summary-bar');
-  if(!el)return;
-  el.innerHTML=`
-    <div><div style="font-size:12px;color:var(--c-sub);">残り / 合計</div>
-    <div style="font-size:15px;font-weight:700;">${todo} / ${active.length}点</div></div>
-    ${priceAll>0?`<div style="text-align:right"><div style="font-size:12px;color:var(--c-sub);">残り予算</div>
-    <div style="font-size:15px;font-weight:700;color:var(--c-primary);">¥${priceTodo.toLocaleString()}</div></div>`:''}
-  `;
+function renderSugg(){
+  const q=norm($('#addInput').value||'');
+  const inList=new Set(vis().filter(i=>!i.done).map(i=>i.name));
+  let src=S.hist.filter(h=>!inList.has(h.name));
+  if(q){const {name}=parseInput(q);src=src.filter(h=>h.name.includes(name)&&h.name!==name)}
+  src.sort((a,b)=>(b.pin-a.pin)||(b.n-a.n));
+  src=src.slice(0,12);
+  $('#sugg').innerHTML=src.map(h=>`<button type="button" class="chip tappable" data-hid="${h.id}"><b>＋</b>${esc(h.name)}</button>`).join('');
+  $('#sugg').style.display=src.length?'flex':'none';
 }
-
-function renderList(){
-  // 壊れたlocalStorage等で想定外の値が入っていてもクラッシュしないよう検証
-  const validFilterIds=FILTERS.map(f=>f.id);
-  const filter=validFilterIds.includes(local.filter)?local.filter:'todo';
-
-  // Filter chips
-  document.getElementById('filter-bar').innerHTML=FILTERS.map(f=>
-    `<button class="filter-chip tappable ${f.id===filter?'active':''}" onclick="setFilter('${f.id}');haptic()">${f.label}</button>`).join('');
-
-  // Summary
-  renderSummary();
-
-  // Filtered items
-  const active=syncItems.filter(i=>!i.deleted);
-  let items=[...active];
-  if(filter==='todo') items=items.filter(i=>!i.done);
-  if(filter==='done') items=items.filter(i=>i.done);
-  if(searchQuery){
-    const q=searchQuery.toLowerCase();
-    items=items.filter(i=>(i.name||'').toLowerCase().includes(q) || (i.note||'').toLowerCase().includes(q));
-  }
-
-  if(!items.length){
-    // 初回同期がまだ終わっていない間は「空」ではなく「読み込み中」を出す
-    if(isInitialSync && room.binId && room.apiKey){
-      document.getElementById('list-content').innerHTML=
-        `<div class="empty-state"><div class="empty-icon" style="animation:pulse 1.2s infinite;">🔄</div>
-        <div class="empty-title">読み込み中…</div><div class="empty-desc">他の端末のデータを取得しています</div></div>`;
-      return;
-    }
-    if(searchQuery){
-      document.getElementById('list-content').innerHTML=
-        `<div class="empty-state"><div class="empty-icon">🔍</div>
-        <div class="empty-title">見つかりませんでした</div>
-        <div class="empty-desc">「${escHtml(searchQuery)}」に一致する商品がありません</div></div>`;
-      return;
-    }
-    const m={all:['🛒','まだ何もありません','右下の＋から追加しましょう'],
-      todo:['✅','すべて購入済みです！','お疲れさまでした'],done:['📭','購入済みはありません','']};
-    const [ic,ti,de]=m[filter];
-    document.getElementById('list-content').innerHTML=
-      `<div class="empty-state"><div class="empty-icon">${ic}</div>
-      <div class="empty-title">${ti}</div><div class="empty-desc">${de}</div></div>`;
-    return;
-  }
-
-  // 担当者グループ順：両方 → たくろう → ゆか
-  // person===null の旧データは'both'扱い
-  const personGroups=[...PERSONS];
-  let html='';
-  personGroups.forEach(pg=>{
-    const pgItems=items.filter(i=>{
-      const p=i.person||'both'; // nullは'both'扱い
-      return p===pg.id;
-    });
-    if(!pgItems.length)return;
-    const pgKey='person-'+(pg.id||'none');
-    const pgCollapsed=(local.collapsedShops||[]).includes(pgKey);
-    const pgPrice=pgItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-    html+=`<div class="person-section">
-      <div class="person-header tappable ${pgCollapsed?'collapsed':''}" onclick="toggleShop('${pgKey}');haptic()">
-        <span class="person-icon">${pg.icon}</span>
-        <span class="person-name">${pg.label}</span>
-        <span class="shop-count">${pgItems.length}</span>
-        ${pgPrice>0?`<span class="shop-price">¥${pgPrice.toLocaleString()}</span>`:''}
-        <span class="shop-toggle">▼</span>
-      </div>
-      <div id="shop-body-${pgKey}" style="${pgCollapsed?'display:none':''}">`;
-    // 買う場所サブグループ
-    SHOPS.forEach(shop=>{
-      const shopItems=pgItems.filter(i=>(i.shop||'super')===shop.id);
-      if(!shopItems.length)return;
-      const shopKey=pgKey+'-'+shop.id;
-      const shopCollapsed=(local.collapsedShops||[]).includes(shopKey);
-      const shopPrice=shopItems.filter(i=>i.price).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||1),0);
-      html+=`<div class="shop-section" style="margin-left:12px;">
-        <div class="shop-header tappable ${shopCollapsed?'collapsed':''}" onclick="toggleShop('${shopKey}');haptic()">
-          <span class="shop-icon">${shop.icon}</span>
-          <span class="shop-name">${shop.label}</span>
-          <span class="shop-count">${shopItems.length}</span>
-          ${shopPrice>0?`<span class="shop-price">¥${shopPrice.toLocaleString()}</span>`:''}
-          <span class="shop-toggle">▼</span>
-        </div>
-        <div id="shop-body-${shopKey}" style="${shopCollapsed?'display:none':''}">
-          ${shopItems.map(item=>renderItemRow(item)).join('')}
-        </div>
-      </div>`;
-    });
-    html+=`</div></div>`;
+function rowHtml(i){
+  const sub=[i.who&&'👤'+i.who,i.memo].filter(Boolean).join(' ・ ');
+  const price=i.price!==''&&i.price!=null?yen(i.price*i.qty):'';
+  return `<div class="rw" data-id="${i.id}"><div class="del">🗑</div>
+    <div class="row ${i.done?'done':''}">
+      <button class="chk tappable" data-chk="${i.id}" aria-label="購入済みにする">${i.done?'✓':''}</button>
+      <button class="body tappable" data-edit="${i.id}"><div class="nm">${esc(i.name)}${i.qty>1?`<span class="q">×${i.qty}</span>`:''}</div>${sub?`<div class="sub">${esc(sub)}</div>`:''}</button>
+      ${price?`<span class="pr">${price}</span>`:''}
+    </div></div>`;
+}
+function listView(){
+  const all=vis(), todo=all.filter(i=>!i.done), done=all.filter(i=>i.done);
+  if(!all.length) return `<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の入力欄に商品名を入れて追加しましょう<br>数量は「牛乳 2」のように書けます</p></div>`;
+  const total=all.reduce((s,i)=>s+(i.price!==''&&i.price!=null?i.price*i.qty:0),0);
+  const pct=Math.round(done.length/all.length*100);
+  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 購入済み</span><span>${total?'合計 '+yen(total):''}</span></div></div>`;
+  if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
+  CATS.forEach(c=>{
+    const its=todo.filter(i=>i.cat===c.id); if(!its.length) return;
+    h+=`<div class="sec-h"><span>${c.e} ${c.n}</span><span>${its.length}</span></div><div class="card">${its.map(rowHtml).join('')}</div>`;
   });
-  document.getElementById('list-content').innerHTML=html;
-  syncItems.forEach(i=>{const el=document.getElementById(`item-inner-${i.id}`);if(el)enableSwipe(el,i.id);});
+  if(done.length) h+=`<div class="sec-h"><span>✓ 購入済み</span><button data-act="clearDone">まとめて消す</button></div><div class="card">${done.map(rowHtml).join('')}</div>`;
+  return h;
+}
+function favView(){
+  const inList=new Set(vis().filter(i=>!i.done).map(i=>i.name));
+  const hs=[...S.hist].sort((a,b)=>(b.pin-a.pin)||(b.n-a.n));
+  if(!hs.length) return `<div class="empty"><div class="em">⭐</div><p>まだ履歴がありません</p><p>追加した商品が自動でここに貯まります</p></div>`;
+  return `<div class="sec-h"><span>よく買う順（⭐で上に固定）</span></div><div class="card">${hs.map(h=>`
+    <div class="hrowx"><button class="star tappable ${h.pin?'on':''}" data-pin="${h.id}">⭐</button>
+    <div class="nm">${esc(h.name)}</div><span class="sub" style="flex:none">${catOf(h.cat).e} ${h.n}回</span>
+    <button class="add tappable ${inList.has(h.name)?'in':''}" data-hadd="${h.id}">${inList.has(h.name)?'追加済':'＋追加'}</button></div>`).join('')}</div>
+    <div style="text-align:center;margin-top:16px"><button class="chip tappable" data-act="clearHist">履歴を消去</button></div>`;
 }
 
-function renderItemRow(item){
-  const cat=CAT_MAP[item.category]||CAT_MAP['other'];
-  const qty=Number(item.qty)||1;
-  const priceN=Number(item.price)||0;
-  const priceStr=priceN>0?`<span class="item-price-tag">¥${(priceN*qty).toLocaleString()}</span>`:'';
-  const noteStr=item.note?`<div class="item-note-inline">📝 ${escHtml(item.note)}</div>`:'';
-  const safeId=escHtml(String(item.id));
-  const safeUnit=escHtml(String(item.unit||'個'));
-  return `<div class="item-card ${item.done?'done':''}" style="position:relative;">
-    <div class="item-delete-bg"><span>🗑️</span></div>
-    <div id="item-inner-${safeId}" style="background:var(--c-bg);border-radius:var(--radius-s);">
-      <div class="item-row">
-        <button class="check-btn ${item.done?'checked':''}" onclick="toggleDone('${safeId}');haptic()"
-          aria-pressed="${item.done?'true':'false'}" aria-label="${escHtml(item.name)}を${item.done?'未購入に戻す':'購入済みにする'}">
-          ${item.done?'✓':''}</button>
-        <span class="item-name">${escHtml(item.name)}</span>
-        <div class="item-right">
-          <span class="cat-tag">${cat.icon}</span>
-          <span class="item-qty">${qty}${safeUnit}</span>
-          ${priceStr}
-          <button class="tappable" onclick="openEditModal('${safeId}')" aria-label="${escHtml(item.name)}を編集"
-            style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:2px 0 2px 2px;">›</button>
-        </div>
-      </div>
-      ${noteStr}
-    </div>
-  </div>`;
-}
-
-function renderFrequent(){
-  const el=document.getElementById('freq-content');
-  const visibleTemplates=syncTemplates.filter(t=>!t.deleted);
-  if(!visibleTemplates.length){
-    el.innerHTML=`<div class="empty-state"><div class="empty-icon">⭐</div>
-      <div class="empty-title">よく買うものがありません</div>
-      <div class="empty-desc">商品追加時に「よく買うものに登録」をオンにすると表示されます</div></div>`;
-    return;
-  }
-  el.innerHTML=visibleTemplates.map(item=>{
-    const shop=SHOP_MAP[item.shop||'super'];
-    const cat=CAT_MAP[item.category]||CAT_MAP['other'];
-    const safeId=escHtml(String(item.id));
-    const qty=Number(item.qty)||1;
-    const priceN=Number(item.price)||0;
-    const safeUnit=escHtml(String(item.unit||'個'));
-    return `<div class="freq-card" onclick="openEditTemplateModal('${safeId}')" style="cursor:pointer;">
-      <span style="font-size:22px;">${shop.icon}</span>
-      <div class="freq-info">
-        <div style="font-size:14px;font-weight:600;">${escHtml(item.name)}</div>
-        <div style="font-size:12px;color:var(--c-sub);margin-top:2px;">
-          ${shop.label} • ${cat.icon}${cat.label}${priceN>0?' • ¥'+priceN.toLocaleString():''} • ${qty}${safeUnit}
-        </div>
-      </div>
-      <button class="tappable" onclick="event.stopPropagation();removeTemplate('${safeId}')" aria-label="${escHtml(item.name)}をよく買うものから削除"
-        style="background:none;border:none;font-size:18px;color:var(--c-sub);padding:4px 6px;margin-right:2px;">🗑</button>
-      <button class="freq-add-btn tappable" onclick="event.stopPropagation();addFromFrequent('${safeId}');haptic()" aria-label="${escHtml(item.name)}をリストに追加">＋</button>
-    </div>`;}).join('');
-}
-
-async function removeTemplate(id){
-  const tmpl=syncTemplates.find(t=>sameId(t.id,id)&&!t.deleted);
-  if(!tmpl){renderFrequent();return;}
-  const ok=await showConfirm('よく買うものから削除',`「${tmpl.name}」を削除しますか？`);
-  if(!ok)return;
-  syncTemplates=syncTemplates.map(t=>sameId(t.id,id)?{...t,deleted:true,updatedAt:Date.now()}:t);
-  haptic('heavy');schedulePush();renderFrequent();showToast('🗑️ 削除しました');
-}
-
-function renderBadge(){
-  const count=syncItems.filter(i=>!i.deleted&&!i.done).length;
-  const b=document.getElementById('badge-list');
-  b.style.display=count>0?'inline-block':'none';
-  b.textContent=count>99?'99+':count;
-}
-
-function setFilter(f){local.filter=f;saveLocal();renderList();}
-
-// ══════════════════════════════════════
-// Search
-// ══════════════════════════════════════
-let searchQuery='';
-function toggleSearch(){
-  const bar=document.getElementById('search-bar');
-  const opening = !bar.style.display || bar.style.display==='none';
-  if(opening){
-    bar.style.display='block';
-    setTimeout(()=>document.getElementById('search-input')?.focus(),50);
-  }else{
-    bar.style.display='none';
-    clearSearch();
-  }
-}
-function onSearchInput(v){
-  searchQuery=v.trim();
-  const btn=document.getElementById('search-clear-btn');
-  if(btn)btn.style.display=searchQuery?'':'none';
-  renderList();
-}
-function clearSearch(){
-  searchQuery='';
-  const input=document.getElementById('search-input');
-  if(input)input.value='';
-  const btn=document.getElementById('search-clear-btn');
-  if(btn)btn.style.display='none';
-  renderList();
-}
-
-function toggleShop(id){
-  const cs=local.collapsedShops||[];
-  local.collapsedShops=cs.includes(id)?cs.filter(x=>x!==id):[...cs,id];
-  saveLocal();
-  const body=document.getElementById(`shop-body-${id}`);
-  const head=body?.previousElementSibling;
-  if(body)body.style.display=body.style.display==='none'?'':'none';
-  if(head)head.classList.toggle('collapsed');
-}
-
-function showPage(page){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(`page-${page}`).classList.add('active');
-  document.querySelectorAll('.nav-btn').forEach(b=>{
-    const isActive = b.dataset.page===page;
-    b.classList.toggle('active', isActive);
-    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+/* ===== スワイプ削除 ===== */
+function bindRows(){
+  document.querySelectorAll('.rw').forEach(rw=>{
+    const row=rw.querySelector('.row'); let sx=0,sy=0,dx=0,lock=null;
+    rw.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;lock=null;row.style.transition='none'},{passive:true});
+    rw.addEventListener('touchmove',e=>{
+      const x=e.touches[0].clientX-sx,y=e.touches[0].clientY-sy;
+      if(lock===null&&(Math.abs(x)>8||Math.abs(y)>8)) lock=Math.abs(x)>Math.abs(y)?'x':'y';
+      if(lock==='x'){dx=Math.min(0,x);row.style.transform=`translateX(${Math.max(dx,-110)}px)`}
+    },{passive:true});
+    rw.addEventListener('touchend',()=>{
+      row.style.transition='';
+      if(lock==='x'&&dx<-70){row.style.transform='translateX(-110%)';haptic('heavy');setTimeout(()=>removeItem(rw.dataset.id),160)}
+      else row.style.transform='';
+    });
   });
-  document.getElementById('page-title').textContent={list:'🛒 買い物リスト',freq:'⭐ よく買うもの'}[page]||'';
-  document.getElementById('header-clear').style.display=page==='list'?'':'none';
-  document.getElementById('search-toggle-btn').style.display=page==='list'?'':'none';
-  document.getElementById('fab').style.display=page==='list'?'':'none';
-  render();
+}
+function removeItem(id){
+  const it=S.items.find(i=>i.id===id&&!i.del); if(!it) return;
+  it.del=true;touch(it);save();render();
+  toast(`${it.name} を削除しました`,{label:'元に戻す',fn:()=>{it.del=false;touch(it);save();render()}});
 }
 
-// ══════════════════════════════════════
-// Init
-// ══════════════════════════════════════
-// ボトムシートに下スワイプ閉じるを登録
-enableSheetSwipeClose(document.querySelector('#modal .modal-sheet'),     closeModal);
-enableSheetSwipeClose(document.querySelector('#cat-sheet .modal-sheet'), closeCatSheet);
-enableSheetSwipeClose(document.querySelector('#sync-modal .modal-sheet'),closeSyncModal);
-// 初期状態: オフラインなら offline、そうでなければ idle
-if(!navigator.onLine){syncState.status='offline';}
-updateSyncUI();
-if(!room.binId||!room.apiKey){
-  document.getElementById('setup-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
-}else{
-  // keyType未設定=旧Master Key運用のユーザーに警告＆再セットアップ案内
-  if(!room.keyType){
-    setTimeout(async()=>{
-      const ok=await showConfirm(
-        '⚠️ セキュリティ更新のお知らせ',
-        '旧バージョンで発行された招待コードには\nMaster Key（全権限）が含まれていました。\n\nセキュリティ強化のため、Access Key方式に\n移行することを強く推奨します。\n\n「移行する」を押すと一度ログアウトし、\n再セットアップ画面が開きます。\nデータはサーバーに残ります。',
-        '移行する','primary');
-      if(ok){
-        teardownSync();
-        room={binId:null,apiKey:null,keyType:null};saveRoom();
-        syncItems=[];syncTemplates=[];saveData();
-        document.getElementById('setup-overlay').classList.add('open');
-        document.body.style.overflow='hidden';
-        render();
+/* ===== トースト ===== */
+let tt=null;
+function toast(msg,undo){
+  const t=$('#toast');t.innerHTML=`<span>${esc(msg)}</span>`;
+  if(undo){const b=document.createElement('button');b.textContent=undo.label;b.onclick=()=>{undo.fn();t.classList.remove('show')};t.appendChild(b)}
+  t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),undo?4500:2200);
+}
+
+/* ===== シート ===== */
+const open=id=>{$(id).classList.add('show');document.body.style.overflow='hidden'};
+const closeAll=()=>{document.querySelectorAll('.ov').forEach(o=>o.classList.remove('show'));document.body.style.overflow=''};
+document.querySelectorAll('[data-close]').forEach(e=>e.addEventListener('click',closeAll));
+
+let editing=null;
+function openEdit(id){
+  const i=S.items.find(x=>x.id===id&&!x.del); if(!i) return;
+  editing={...i};
+  const sh=$('#sheetEdit');
+  sh.innerHTML=`<div class="grab"></div><h2>商品を編集</h2><p class="desc">&nbsp;</p>
+    <div class="fld"><label>商品名</label><input id="eName" value="${esc(i.name)}"></div>
+    <div class="fld"><label>数量</label><div class="stp"><button class="tappable" data-q="-1">−</button><span id="eQty">${i.qty}</span><button class="tappable" data-q="1">＋</button></div></div>
+    <div class="fld"><label>売り場</label><div class="cats">${CATS.map(c=>`<button class="tappable ${c.id===i.cat?'on':''}" data-cat="${c.id}">${c.e} ${c.n}</button>`).join('')}</div></div>
+    <div class="two"><div class="fld"><label>単価（任意）</label><input id="ePrice" type="number" inputmode="numeric" min="0" value="${i.price}" placeholder="円"></div>
+    <div class="fld"><label>買う人（任意）</label><input id="eWho" value="${esc(i.who)}" placeholder="例：パパ"></div></div>
+    <div class="fld"><label>メモ（任意）</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
+    <button class="btn p tappable" data-save>保存</button>
+    <button class="btn g tappable" data-del>削除</button>`;
+  sh.onclick=e=>{
+    const q=e.target.closest('[data-q]'),c=e.target.closest('[data-cat]');
+    if(q){editing.qty=Math.min(99,Math.max(1,editing.qty+ +q.dataset.q));$('#eQty').textContent=editing.qty;haptic()}
+    else if(c){editing.cat=c.dataset.cat;sh.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('on',b.dataset.cat===editing.cat));haptic()}
+    else if(e.target.closest('[data-save]')){
+      const nm=norm($('#eName').value);
+      if(!nm){$('#eName').style.borderColor='var(--c-danger)';return}
+      const p=$('#ePrice').value;
+      const tgt=S.items.find(x=>x.id===id);
+      if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,price:p===''?'':Math.max(0,+p),who:norm($('#eWho').value),memo:norm($('#eMemo').value)});touch(tgt)}
+      const h=S.hist.find(x=>x.name===nm);if(h)h.cat=editing.cat;
+      save();render();closeAll();haptic();toast('保存しました');
+    }
+    else if(e.target.closest('[data-del]')){closeAll();removeItem(id)}
+  };
+  open('#ovEdit');
+}
+
+function confirmSheet({title,msg,label,danger=true,onOk}){
+  $('#sheetConfirm').innerHTML=`<div class="grab"></div><h2>${esc(title)}</h2><p class="desc">${esc(msg)}</p>
+    <button class="btn ${danger?'d':'p'} tappable" id="cOk">${esc(label)}</button><button class="btn g tappable" data-close2>キャンセル</button>`;
+  $('#cOk').onclick=()=>{onOk();closeAll();haptic('heavy')};
+  $('#sheetConfirm').querySelector('[data-close2]').onclick=closeAll;
+  open('#ovConfirm');
+}
+
+/* ===== リアルタイム同期（登録不要）=====
+   中継: ntfy.sh（公開の pub/sub）。内容は部屋コードから作った鍵で AES-GCM 暗号化してから送るので、
+   中継サーバーには読めない暗号文だけが流れる。部屋コードを知っている人だけが読み書きできる。
+   商品ごとに更新時刻 t を持ち、新しい方を採用する（削除は del:true の墓標）。 */
+const SK='kaimono2_sync';
+let SY=(()=>{try{return JSON.parse(localStorage.getItem(SK))||{}}catch{return{}}})();
+SY.relay=SY.relay||'https://ntfy.sh';
+const saveSY=()=>{try{localStorage.setItem(SK,JSON.stringify(SY))}catch{}};
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b64=u=>{let s='';for(let k=0;k<u.length;k+=8192)s+=String.fromCharCode.apply(null,u.subarray(k,k+8192));return btoa(s)};
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const hex=u=>[...u].map(x=>x.toString(16).padStart(2,'0')).join('');
+const sha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(s)));
+
+let es=null,aesKey=null,topic='',seen={},dirty=new Set(),pushT=null,replayT=null,retryT=null,retry=0,status='off',pushing=false;
+
+function setStatus(s){status=s;const d=$('#syncDot');if(d)d.className='dot '+(s==='on'?'on':s==='connecting'?'connecting':'')}
+const hasSync=()=>!!(SY.room&&aesKey);
+const newRoom=()=>hex(crypto.getRandomValues(new Uint8Array(16)));
+const inviteUrl=()=>location.href.split('#')[0]+'#r='+SY.room;
+
+async function sealMsg(obj){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,enc.encode(JSON.stringify(obj))));
+  const all=new Uint8Array(12+ct.length);all.set(iv);all.set(ct,12);return b64(all);
+}
+async function openMsg(s){
+  const all=unb64(s);
+  return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(0,12)},aesKey,all.slice(12))));
+}
+const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,price:i.price,memo:i.memo,who:i.who,done:!!i.done,del:!!i.del,t:i.t});
+function clean(r){
+  const price=r.price===''||r.price==null?'':Math.max(0,+r.price||0);
+  return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:CATS.some(c=>c.id===r.cat)?r.cat:'other',
+    qty:Math.min(99,Math.max(1,+r.qty||1)),price,memo:String(r.memo||'').slice(0,100),who:String(r.who||'').slice(0,20),
+    done:!!r.done,del:!!r.del,t:+r.t||0};
+}
+const newer=(a,b)=>a.t>b.t||(a.t===b.t&&JSON.stringify(a)>JSON.stringify(b));
+
+function mergeRemote(list){
+  let changed=false;
+  for(const raw of list){
+    if(!raw||!raw.id) continue;
+    const r=clean(raw); if(!r.id||!r.name) continue;
+    seen[r.id]=Math.max(seen[r.id]||0,r.t);
+    const l=S.items.find(i=>i.id===r.id);
+    if(!l){S.items.push(r);changed=true;if(!r.del&&!S.hist.some(h=>h.name===r.name))S.hist.push({id:uid(),name:r.name,cat:r.cat,n:1,pin:false})}
+    else if(newer(r,clean(l))){Object.assign(l,r);changed=true}
+  }
+  if(changed){save();requestAnimationFrame(render)}
+}
+
+function markDirty(id){
+  dirty.add(id);
+  if(!SY.room) return;
+  clearTimeout(pushT);pushT=setTimeout(flush,300);
+}
+function pushDiff(){
+  S.items.forEach(i=>{if(i.t>(seen[i.id]||0))dirty.add(i.id)});
+  flush();
+}
+async function flush(){
+  if(pushing||!hasSync()||status!=='on'||!dirty.size) return;
+  pushing=true;let failed=false;
+  try{
+    const ids=[...dirty];dirty.clear();
+    const items=ids.map(id=>S.items.find(i=>i.id===id)).filter(Boolean).map(wire);
+    const chunks=[];let cur=[];
+    for(const it of items){
+      if(cur.length&&enc.encode(JSON.stringify([...cur,it])).length>1800){chunks.push(cur);cur=[]}
+      cur.push(it);
+    }
+    if(cur.length) chunks.push(cur);
+    for(let k=0;k<chunks.length;k++){
+      let ok=false;
+      try{
+        const body=await sealMsg({items:chunks[k]});
+        const res=await fetch(`${SY.relay}/${topic}`,{method:'POST',body});
+        ok=res.ok;
+      }catch{}
+      if(!ok){
+        for(let j=k;j<chunks.length;j++) chunks[j].forEach(x=>dirty.add(x.id));
+        throw new Error('push');
       }
-    },600);
-  }
-  // 旧データ移行チェック（初回ロード時）
-  if(migrateFrequentItems()) schedulePush();
-  startSync();
-}
-showPage('list');
-</script>
-<script>
-// PWA Manifest（インラインで動的生成）
-const _manifest = {
-  "name": "買い物リスト",
-  "short_name": "買い物",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "icons": [
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+CiAgPHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMyLDI4KSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPCEtLSDjgqvjg7zjg4jjg4/jg7Pjg4njg6sgLS0+CiAgICA8cGF0aCBkPSJNOCA4IEwyOCA4IEw0NCA4OCBMMTA4IDg4IEwxMjQgMzYgTDI4IDM2IiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDwhLS0g44K/44Kk44OkIC0tPgogICAgPGNpcmNsZSBjeD0iNTIiIGN5PSIxMTAiIHI9IjEyIiBzdHJva2Utd2lkdGg9IjkiLz4KICAgIDxjaXJjbGUgY3g9IjEwMCIgY3k9IjExMCIgcj0iMTIiIHN0cm9rZS13aWR0aD0iOSIvPgogICAgPCEtLSDjg4Hjgqfjg4Pjgq/jg57jg7zjgq/vvIjos7zlhaXmuIjjgb/mhJ/vvIkgLS0+CiAgICA8cGF0aCBkPSJNNjIgNjAgTDc0IDcyIEw5NiA0OCIgc3Ryb2tlLXdpZHRoPSIxMCIgc3Ryb2tlPSIjZmZmZmZmIi8+CiAgPC9nPgo8L3N2Zz4=",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTAiIGZpbGw9IiMyNTYzZWIiLz4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg3Niw2NCkiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNMjAgMjAgTDc2IDIwIEwxMjQgMjQ0IEwzMDAgMjQ0IEwzNDQgMTAwIEw3NiAxMDAiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxjaXJjbGUgY3g9IjE0NCIgY3k9IjMwOCIgcj0iMzQiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxjaXJjbGUgY3g9IjI4MCIgY3k9IjMwOCIgcj0iMzQiIHN0cm9rZS13aWR0aD0iMjQiLz4KICAgIDxwYXRoIGQ9Ik0xNjQgMTY4IEwyMDAgMjA0IEwyNjggMTMyIiBzdHJva2Utd2lkdGg9IjI4IiBzdHJva2U9IiNmZmZmZmYiLz4KICA8L2c+Cjwvc3ZnPg==",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
     }
-  ]
-};
-const _blob = new Blob([JSON.stringify(_manifest)], {type:'application/json'});
-const _url = URL.createObjectURL(_blob);
-document.getElementById('pwa-manifest').setAttribute('href', _url);
+    retry=0;
+  }catch{
+    failed=true;retry++;clearTimeout(pushT);pushT=setTimeout(flush,Math.min(30000,3000*2**Math.min(retry,4)));
+  }finally{pushing=false}
+  if(!failed&&dirty.size){clearTimeout(pushT);pushT=setTimeout(flush,300)}
+}
+
+function connect(){
+  clearTimeout(retryT);
+  if(es){es.onopen=es.onmessage=es.onerror=null;es.close()}
+  if(!hasSync()){setStatus('off');return}
+  setStatus('connecting');seen={};
+  es=new EventSource(`${SY.relay}/${topic}/sse?since=all`);
+  es.onopen=()=>{
+    retry=0;setStatus('on');
+    clearTimeout(replayT);replayT=setTimeout(pushDiff,1800); // 履歴の再生が終わってから、相手が持っていない分だけ送る
+  };
+  es.onmessage=async e=>{
+    try{
+      const m=JSON.parse(e.data);
+      if(m.event&&m.event!=='message') return;
+      const p=await openMsg(m.message);
+      if(Array.isArray(p.items)) mergeRemote(p.items);
+    }catch{}
+  };
+  es.onerror=()=>{
+    setStatus('connecting');
+    if(es.readyState===2){retryT=setTimeout(connect,Math.min(30000,2000*2**Math.min(retry++,4)))}
+  };
+}
+async function syncStart(){
+  if(!SY.room){setStatus('off');return}
+  if(!window.crypto?.subtle){setStatus('off');toast('この環境では同期を使えません（https のページで開いてください）');return}
+  topic='kaimono-'+hex(await sha('topic:'+SY.room)).slice(0,40);
+  aesKey=await crypto.subtle.importKey('raw',await sha('key:'+SY.room),'AES-GCM',false,['encrypt','decrypt']);
+  connect();
+}
+function syncStop(){
+  clearTimeout(pushT);clearTimeout(replayT);clearTimeout(retryT);
+  if(es){es.onopen=es.onmessage=es.onerror=null;es.close();es=null}
+  SY.room='';aesKey=null;topic='';saveSY();setStatus('off');
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&hasSync()&&(!es||es.readyState!==1)) connect();
+});
+window.addEventListener('online',()=>{if(hasSync()) connect()});
+
+/* ===== 共有シート ===== */
+function listText(){
+  const todo=vis().filter(i=>!i.done);
+  let t='🛒 買い物リスト\n';
+  CATS.forEach(c=>{const its=todo.filter(i=>i.cat===c.id);if(!its.length)return;t+=`\n${c.e}${c.n}\n`+its.map(i=>`・${i.name}${i.qty>1?' ×'+i.qty:''}${i.memo?'（'+i.memo+'）':''}`).join('\n')+'\n'});
+  return t;
+}
+async function copy(t){
+  try{await navigator.clipboard.writeText(t)}catch{
+    const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+  }
+}
+function openShare(){
+  const on=!!SY.room;
+  const st={on:'リアルタイム同期中',connecting:'接続しています…',off:'同期はオフです'}[on?status:'off'];
+  $('#sheetShare').innerHTML=`<div class="grab"></div>
+    <h2>${on?'家族と共有中':'家族とリアルタイム共有'}</h2>
+    ${on?`<div class="stat"><span class="dot ${status==='on'?'on':status==='connecting'?'connecting':''}"></span>${st}</div>
+      <p class="desc">招待リンクを開いた人と、リストが自動で同期されます。</p>
+      <button class="btn p tappable" data-s="invite">📤 招待リンクを送る</button>
+      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>
+      <button class="btn g tappable" data-s="leave" style="color:var(--c-danger)">同期をやめる</button>`
+    :`<p class="desc">アカウント登録は不要です。はじめると招待リンクができ、それを開いた人とリストが自動で同期されます。</p>
+      <button class="btn p tappable" data-s="start">🔗 共有をはじめる</button>
+      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>`}
+    <button class="btn g tappable" data-close2>閉じる</button>
+    <p class="note">内容は端末で暗号化してから送られ、中継サーバーには読めません。招待リンクを知っている人は誰でも参加できるので、家族以外には送らないでください。</p>`;
+  const sh=$('#sheetShare');
+  sh.onclick=async e=>{
+    if(e.target.closest('[data-close2]')) return closeAll();
+    const b=e.target.closest('[data-s]'); if(!b) return;
+    const a=b.dataset.s;
+    if(a==='text'){
+      if(!vis().some(i=>!i.done)){toast('未購入の商品がありません');return}
+      copy(listText()).then(()=>{toast('コピーしました');closeAll()});
+    }else if(a==='start'){
+      if(!window.crypto?.subtle){toast('https のページで開いてください');return}
+      SY.room=newRoom();saveSY();
+      await syncStart();haptic();openShare();
+    }else if(a==='invite'){
+      const url=inviteUrl();
+      if(navigator.share){try{await navigator.share({title:'買い物リストに参加',text:'買い物リストを一緒に使おう。このリンクを開くと同期されます。',url})}catch{}}
+      else copy(url).then(()=>toast('招待リンクをコピーしました'));
+    }else if(a==='leave'){
+      closeAll();
+      confirmSheet({title:'同期をやめますか？',msg:'この端末のリストはそのまま残ります。他の端末とは同期されなくなります。',label:'やめる',onOk:()=>{syncStop();toast('同期をやめました')}});
+    }
+  };
+  open('#ovShare');
+}
+function checkIncoming(){
+  const m=location.hash.match(/^#r=([0-9a-f]{32})$/); if(!m) return;
+  const code=m[1];
+  history.replaceState(null,'',location.pathname+location.search);
+  if(SY.room===code){toast('すでにこのリストと同期中です');return}
+  if(!window.crypto?.subtle){toast('https のページで開いてください');return}
+  confirmSheet({title:'共有リストに参加しますか？',
+    msg:(SY.room?'今の同期先から、この招待先に切り替わります。':'')+'参加すると、この端末のリストも相手と共有され、以後は自動で同期されます。',
+    label:'参加する',danger:false,onOk:async()=>{
+      SY.room=code;saveSY();seen={};
+      S.items.forEach(i=>dirty.add(i.id));
+      await syncStart();toast('参加しました');
+    }});
+}
+
+/* ===== メニュー ===== */
+function openMenu(){
+  $('#sheetMenu').innerHTML=`<div class="grab"></div>
+    <button class="mrow tappable" data-m="clearDone"><span>✓</span><span>購入済みをまとめて消す</span></button>
+    <button class="mrow tappable" data-m="uncheck"><span>↩︎</span><span>購入済みをリストに戻す</span></button>
+    <button class="mrow tappable" data-m="clearAll" style="color:var(--c-danger)"><span>🗑</span><span>リストを全件削除</span></button>
+    <button class="btn g tappable" data-close2>閉じる</button>`;
+  $('#sheetMenu').onclick=e=>{
+    if(e.target.closest('[data-close2]')) return closeAll();
+    const m=e.target.closest('[data-m]')?.dataset.m; if(!m) return;
+    closeAll();
+    if(m==='clearDone') doClearDone();
+    if(m==='uncheck'){vis().filter(i=>i.done).forEach(i=>{i.done=false;touch(i)});save();render();toast('リストに戻しました')}
+    if(m==='clearAll') confirmSheet({title:'リストを全件削除しますか？',msg:'同期中の場合は、共有している全員のリストからも消えます。',label:'削除する',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
+  };
+  open('#ovMenu');
+}
+function doClearDone(){
+  const done=vis().filter(i=>i.done); if(!done.length){toast('購入済みの商品はありません');return}
+  done.forEach(i=>{i.del=true;touch(i)});save();render();
+  toast(`${done.length}件を消しました`,{label:'元に戻す',fn:()=>{done.forEach(i=>{i.del=false;touch(i)});save();render()}});
+}
+
+/* ===== イベント ===== */
+$('#addForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const v=$('#addInput').value; if(!norm(v)){$('#addInput').focus();return}
+  const {name,qty}=parseInput(v);
+  addItem(name,qty);haptic();
+  $('#addInput').value='';renderSugg();
+});
+$('#addInput').addEventListener('input',renderSugg);
+$('#sugg').addEventListener('click',e=>{
+  const b=e.target.closest('[data-hid]');if(!b)return;
+  const h=S.hist.find(x=>x.id===b.dataset.hid);if(h){addItem(h.name,1,h.cat);haptic()}
+});
+document.querySelector('.seg').addEventListener('click',e=>{
+  const b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;render();window.scrollTo(0,0);
+});
+$('#main').addEventListener('click',e=>{
+  const t=e.target;
+  const chk=t.closest('[data-chk]');
+  if(chk){const i=S.items.find(x=>x.id===chk.dataset.chk&&!x.del);if(i){i.done=!i.done;touch(i);save();render();haptic()}return}
+  const ed=t.closest('[data-edit]');if(ed){openEdit(ed.dataset.edit);return}
+  const pin=t.closest('[data-pin]');if(pin){const h=S.hist.find(x=>x.id===pin.dataset.pin);if(h){h.pin=!h.pin;save();render();haptic()}return}
+  const ha=t.closest('[data-hadd]');if(ha){const h=S.hist.find(x=>x.id===ha.dataset.hadd);if(h&&!vis().some(i=>!i.done&&i.name===h.name)){addItem(h.name,1,h.cat);haptic()}return}
+  const act=t.closest('[data-act]')?.dataset.act;
+  if(act==='clearDone')doClearDone();
+  if(act==='clearHist')confirmSheet({title:'履歴を消去しますか？',msg:'「よく買うもの」の候補がすべて消えます。リストは消えません。',label:'消去する',onOk:()=>{S.hist=[];save();render()}});
+});
+$('#btnShare').addEventListener('click',openShare);
+$('#btnMenu').addEventListener('click',openMenu);
+window.addEventListener('hashchange',checkIncoming);
+window.addEventListener('storage',e=>{if(e.key===KEY){try{const d=JSON.parse(e.newValue);if(d&&Array.isArray(d.items)){S={items:d.items,hist:d.hist||[]};render()}}catch{}}});
+
+render();
+syncStart();
+checkIncoming();
 </script>
 </body>
 </html>
