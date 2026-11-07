@@ -541,6 +541,7 @@ function openMenu(){
   $('#sheetMenu').innerHTML=`<div class="grab"></div>
     <button class="mrow tappable" data-m="clearDone"><span>✓</span><span>購入済みをまとめて消す</span></button>
     <button class="mrow tappable" data-m="uncheck"><span>↩︎</span><span>購入済みをリストに戻す</span></button>
+    <button class="mrow tappable" data-m="reimport"><span>📥</span><span>旧版のデータを取り込む</span></button>
     <button class="mrow tappable" data-m="clearAll" style="color:var(--c-danger)"><span>🗑</span><span>リストを全件削除</span></button>
     <button class="btn g tappable" data-close2>閉じる</button>`;
   $('#sheetMenu').onclick=e=>{
@@ -548,6 +549,7 @@ function openMenu(){
     const m=e.target.closest('[data-m]')?.dataset.m; if(!m) return;
     closeAll();
     if(m==='clearDone') doClearDone();
+    if(m==='reimport') migrateOld(true);
     if(m==='uncheck'){vis().filter(i=>i.done).forEach(i=>{i.done=false;touch(i)});save();render();toast('リストに戻しました')}
     if(m==='clearAll') confirmSheet({title:'リストを全件削除しますか？',msg:'同期中の場合は、共有している全員のリストからも消えます。',label:'削除する',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
   };
@@ -591,8 +593,65 @@ $('#btnMenu').addEventListener('click',openMenu);
 window.addEventListener('hashchange',checkIncoming);
 window.addEventListener('storage',e=>{if(e.key===KEY){try{const d=JSON.parse(e.newValue);if(d&&Array.isArray(d.items)){S={items:d.items,hist:d.hist||[]};render()}}catch{}}});
 
+/* ===== 旧版（JSONBin版）からの引き継ぎ =====
+   同じURLで動いていた旧版が端末に残したデータ（と、あれば JSONBin の最新データ）を取り込む。
+   id は 'o_'+旧id で固定なので、何度実行しても重複しない。 */
+const MK='kaimono2_migrated';
+const OLD_CAT={vegfruit:'veg',meat:'meat',dairy:'dairy',bread:'staple',frozen:'frozen',drink:'drink',daily:'daily',other:'other'};
+const OLD_WHO={takuro:'たくろう',yuka:'ゆか'};
+const OLD_SHOP={amazon:'Amazon',other:'その他'};
+function importOld(items,templates){
+  let n=0;const now=Date.now();
+  const arr=a=>Array.isArray(a)?a:[];
+  for(const o of arr(items)){
+    if(!o||typeof o!=='object'||o.deleted) continue;
+    const name=norm(String(o.name||'')).slice(0,60); if(!name) continue;
+    const oid=String(o.id||'').replace(/[^A-Za-z0-9]/g,''); if(!oid) continue;
+    const id='o_'+oid.slice(-20);
+    if(S.items.some(i=>i.id===id)) continue;
+    const unit=String(o.unit||''),q=Math.round(+o.qty||1);
+    const plain=!unit||unit==='個';
+    const memo=[OLD_SHOP[o.shop]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
+    const cat=OLD_CAT[o.category]||'other';
+    S.items.push(touch({id,name,cat,qty:plain?Math.min(99,Math.max(1,q)):1,price:+o.price>0?Math.min(99999,+o.price):'',
+      memo,who:OLD_WHO[o.person]||'',done:!!o.done,del:false,t:0}));
+    if(!S.hist.some(h=>h.name===name)) S.hist.push({id:uid(),name,cat,n:1,pin:false});
+    n++;
+  }
+  for(const o of arr(templates)){
+    if(!o||typeof o!=='object'||o.deleted) continue;
+    const name=norm(String(o.name||'')).slice(0,60); if(!name) continue;
+    const h=S.hist.find(x=>x.name===name);
+    if(h) h.pin=true; else S.hist.push({id:uid(),name,cat:OLD_CAT[o.category]||guessCat(name),n:1,pin:true});
+  }
+  return n;
+}
+async function migrateOld(force){
+  let total=0,found=false;
+  try{
+    if(!force&&localStorage.getItem(MK)) return;
+    const d=JSON.parse(localStorage.getItem('shoplist-v6-data')||'null');
+    if(d){found=true;total+=importOld(d.items,d.templates)}
+    const room=JSON.parse(localStorage.getItem('shoplist-v6-room')||'null');
+    if(room&&room.binId&&room.apiKey){
+      found=true;
+      try{
+        const ac=new AbortController();const to=setTimeout(()=>ac.abort(),8000);
+        const r=await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(room.binId)}/latest`,{headers:{'X-Access-Key':room.apiKey},signal:ac.signal});
+        clearTimeout(to);
+        if(r.ok){const j=await r.json();const rec=j.record||j;total+=importOld(rec.items,rec.templates)}
+      }catch{}
+    }
+  }catch{}
+  try{localStorage.setItem(MK,'1')}catch{}
+  save();render();
+  if(total) toast(`旧版から ${total} 件を引き継ぎました`);
+  else if(force) toast(found?'新しく取り込む商品はありませんでした':'この端末に旧版のデータが見つかりません');
+}
+
 render();
 syncStart();
+migrateOld();
 checkIncoming();
 </script>
 </body>
