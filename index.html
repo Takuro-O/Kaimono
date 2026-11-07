@@ -60,6 +60,9 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 .progress .meta{display:flex;justify-content:space-between;font-size:13px;color:var(--c-sub);margin-top:6px}
 
 .sec-h{font-size:13px;font-weight:600;color:var(--c-sub);padding:0 16px;margin:18px 0 6px;display:flex;justify-content:space-between;align-items:center}
+.sec-h.fold{padding-top:8px;padding-bottom:8px;margin:8px 0 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.only{padding:2px 10px;border:none;border-radius:10px;background:var(--c-primary-light);font-size:12px;font-weight:600;color:var(--c-primary)}
+.sec-h .only{margin-left:12px;background:var(--c-primary-light);padding:2px 10px}
 .sec-h button{border:none;background:none;font-size:13px;font-weight:600;color:var(--c-primary)}
 .card{margin:0 16px;border:1px solid var(--c-border);border-radius:var(--radius-m);overflow:hidden;box-shadow:var(--shadow-card);background:#fff}
 .rw{position:relative;overflow:hidden;border-top:1px solid var(--c-border)}
@@ -230,6 +233,9 @@ const SHK='kaimono2_shops',SELK='kaimono2_shop';
 let customShops=(()=>{try{const a=JSON.parse(localStorage.getItem(SHK));return Array.isArray(a)?a.map(x=>String(x).slice(0,12)):[]}catch{return[]}})();
 const saveShops=()=>{try{localStorage.setItem(SHK,JSON.stringify(customShops))}catch{}};
 let selShop=(()=>{try{return localStorage.getItem(SELK)}catch{return null}})()||'スーパー';
+const FOLDK='kaimono2_fold';
+let folded=new Set((()=>{try{const a=JSON.parse(localStorage.getItem(FOLDK));return Array.isArray(a)?a:[]}catch{return[]}})());
+const saveFold=()=>{try{localStorage.setItem(FOLDK,JSON.stringify([...folded]))}catch{}};
 function shopList(){
   const out=SHOPS.map(x=>x.n);
   [...customShops,...vis().map(i=>i.cat)].forEach(n=>{if(n&&!out.includes(n))out.push(n)});
@@ -262,6 +268,7 @@ function bumpHist(name,cat){
 function addItem(name,qty=1,cat,extra={}){
   name=norm(name); if(!name) return false;
   cat=cat||selShop;
+  if(folded.delete(cat)) saveFold();
   const ex=vis().find(i=>!i.done&&i.name===name&&i.cat===cat);
   if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} ×${ex.qty}`);return true}
   S.items.push(touch({id:uid(),name,cat,qty,memo:'',done:false,del:false,t:0,...extra}));
@@ -328,11 +335,13 @@ function listView(){
   const pct=Math.round(done.length/all.length*100);
   let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 買った</span><span></span></div></div>`;
   if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
-  shopList().forEach(n=>{
-    const its=todo.filter(i=>i.cat===n); if(!its.length) return;
-    h+=`<div class="sec-h"><span>${shopE(n)} ${esc(n)}</span><span>${its.length}</span></div><div class="card">${its.map(rowHtml).join('')}</div>`;
+  const groups=shopList().filter(n=>todo.some(i=>i.cat===n));
+  groups.forEach(n=>{
+    const its=todo.filter(i=>i.cat===n),f=folded.has(n);
+    h+=`<div class="sec-h fold" data-fold="${esc(n)}"><span>${f?'▸':'▾'} ${shopE(n)} ${esc(n)}</span><span>${its.length}${groups.length>1?`<button class="only" data-only="${esc(n)}">これだけ</button>`:''}</span></div>${f?'':`<div class="card">${its.map(rowHtml).join('')}</div>`}`;
   });
-  if(done.length) h+=`<div class="sec-h"><span>✓ 買った</span><button data-act="clearDone">全部消す</button></div><div class="card">${done.map(rowHtml).join('')}</div>`;
+  if(done.length){const f=folded.has('買った');h+=`<div class="sec-h fold" data-fold="買った"><span>${f?'▸':'▾'} ✓ 買った</span><button data-act="clearDone">全部消す</button></div>${f?'':`<div class="card">${done.map(rowHtml).join('')}</div>`}`}
+  if(groups.some(n=>folded.has(n))||(done.length&&folded.has('買った'))) h=h.replace('<span></span></div></div>','<button class="only" data-unfoldall style="margin:0">全部開く</button></div></div>');
   return h;
 }
 function favView(){
@@ -683,6 +692,11 @@ document.querySelector('.seg').addEventListener('click',e=>{
 });
 $('#main').addEventListener('click',e=>{
   const t=e.target;
+  const only=t.closest('[data-only]');
+  if(only){const n=only.dataset.only;shopList().forEach(x=>x===n?folded.delete(x):folded.add(x));saveFold();render();haptic();return}
+  if(t.closest('[data-unfoldall]')){folded.clear();saveFold();render();haptic();return}
+  const fd=t.closest('[data-fold]');
+  if(fd&&!t.closest('button')){const n=fd.dataset.fold;folded.has(n)?folded.delete(n):folded.add(n);saveFold();render();haptic();return}
   const chk=t.closest('[data-chk]');
   if(chk){const i=S.items.find(x=>x.id===chk.dataset.chk&&!x.del);if(i){i.done=!i.done;touch(i);save();render();haptic()}return}
   const ed=t.closest('[data-edit]');if(ed){openEdit(ed.dataset.edit);return}
