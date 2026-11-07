@@ -176,6 +176,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 /* 各商品は更新時刻 t を持ち、削除は del:true（墓標）で表す。同期はこの t が新しい方を採用する */
 S.items.forEach(i=>{i.t=+i.t||0;i.del=!!i.del});
 S.items=S.items.filter(i=>!(i.del&&i.t<Date.now()-30*864e5));
+S.items.forEach(i=>{if(i.who){i.memo=[i.who,i.memo].filter(Boolean).join(' ・ ').slice(0,100);delete i.who;i.t=Math.max(Date.now(),i.t+1)}else delete i.who});
 const vis=()=>S.items.filter(i=>!i.del);
 const touch=i=>{i.t=Math.max(Date.now(),(i.t||0)+1);markDirty(i.id);return i};
 const $=s=>document.querySelector(s);
@@ -206,7 +207,7 @@ function addItem(name,qty=1,cat,extra={}){
   const ex=vis().find(i=>!i.done&&i.name===name);
   if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} の数量を ${ex.qty} にしました`);return true}
   cat=cat||guessCat(name);
-  S.items.push(touch({id:uid(),name,cat,qty,price:'',memo:'',who:'',done:false,del:false,t:0,...extra}));
+  S.items.push(touch({id:uid(),name,cat,qty,price:'',memo:'',done:false,del:false,t:0,...extra}));
   bumpHist(name,cat);save();render();return true;
 }
 
@@ -229,7 +230,7 @@ function renderSugg(){
   $('#sugg').style.display=src.length?'flex':'none';
 }
 function rowHtml(i){
-  const sub=[i.who&&'👤'+i.who,i.memo].filter(Boolean).join(' ・ ');
+  const sub=i.memo||'';
   const price=i.price!==''&&i.price!=null?yen(i.price*i.qty):'';
   return `<div class="rw" data-id="${i.id}"><div class="del">🗑</div>
     <div class="row ${i.done?'done':''}">
@@ -308,8 +309,7 @@ function openEdit(id){
     <div class="fld"><label>商品名</label><input id="eName" value="${esc(i.name)}"></div>
     <div class="fld"><label>数量</label><div class="stp"><button class="tappable" data-q="-1">−</button><span id="eQty">${i.qty}</span><button class="tappable" data-q="1">＋</button></div></div>
     <div class="fld"><label>売り場</label><div class="cats">${CATS.map(c=>`<button class="tappable ${c.id===i.cat?'on':''}" data-cat="${c.id}">${c.e} ${c.n}</button>`).join('')}</div></div>
-    <div class="two"><div class="fld"><label>単価（任意）</label><input id="ePrice" type="number" inputmode="numeric" min="0" value="${i.price}" placeholder="円"></div>
-    <div class="fld"><label>買う人（任意）</label><input id="eWho" value="${esc(i.who)}" placeholder="例：パパ"></div></div>
+    <div class="fld"><label>単価（任意）</label><input id="ePrice" type="number" inputmode="numeric" min="0" value="${i.price}" placeholder="円"></div>
     <div class="fld"><label>メモ（任意）</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
     <button class="btn p tappable" data-save>保存</button>
     <button class="btn g tappable" data-del>削除</button>`;
@@ -322,7 +322,7 @@ function openEdit(id){
       if(!nm){$('#eName').style.borderColor='var(--c-danger)';return}
       const p=$('#ePrice').value;
       const tgt=S.items.find(x=>x.id===id);
-      if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,price:p===''?'':Math.max(0,+p),who:norm($('#eWho').value),memo:norm($('#eMemo').value)});touch(tgt)}
+      if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,price:p===''?'':Math.max(0,+p),memo:norm($('#eMemo').value)});touch(tgt)}
       const h=S.hist.find(x=>x.name===nm);if(h)h.cat=editing.cat;
       save();render();closeAll();haptic();toast('保存しました');
     }
@@ -369,11 +369,11 @@ async function openMsg(s){
   const all=unb64(s);
   return JSON.parse(dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(0,12)},aesKey,all.slice(12))));
 }
-const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,price:i.price,memo:i.memo,who:i.who,done:!!i.done,del:!!i.del,t:i.t});
+const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,price:i.price,memo:i.memo,done:!!i.done,del:!!i.del,t:i.t});
 function clean(r){
   const price=r.price===''||r.price==null?'':Math.max(0,+r.price||0);
   return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:CATS.some(c=>c.id===r.cat)?r.cat:'other',
-    qty:Math.min(99,Math.max(1,+r.qty||1)),price,memo:String(r.memo||'').slice(0,100),who:String(r.who||'').slice(0,20),
+    qty:Math.min(99,Math.max(1,+r.qty||1)),price,memo:[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ ').slice(0,100),
     done:!!r.done,del:!!r.del,t:+r.t||0};
 }
 const newer=(a,b)=>a.t>b.t||(a.t===b.t&&JSON.stringify(a)>JSON.stringify(b));
@@ -611,10 +611,10 @@ function importOld(items,templates){
     if(S.items.some(i=>i.id===id)) continue;
     const unit=String(o.unit||''),q=Math.round(+o.qty||1);
     const plain=!unit||unit==='個';
-    const memo=[OLD_SHOP[o.shop]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
+    const memo=[OLD_WHO[o.person]||'',OLD_SHOP[o.shop]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
     const cat=OLD_CAT[o.category]||'other';
     S.items.push(touch({id,name,cat,qty:plain?Math.min(99,Math.max(1,q)):1,price:+o.price>0?Math.min(99999,+o.price):'',
-      memo,who:OLD_WHO[o.person]||'',done:!!o.done,del:false,t:0}));
+      memo,done:!!o.done,del:false,t:0}));
     if(!S.hist.some(h=>h.name===name)) S.hist.push({id:uid(),name,cat,n:1,pin:false});
     n++;
   }
