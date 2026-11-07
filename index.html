@@ -45,7 +45,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdr
 #chipsArea{padding:10px 16px 0}
 #shopSel{flex-wrap:wrap;gap:6px;overflow:visible;padding:0 0 10px}
 #shopSel .chip{flex:1 1 auto;height:34px;padding:0 6px;font-size:13px;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-#sugg{flex-wrap:wrap;overflow:visible;gap:6px}
+#sugg{flex-wrap:wrap;gap:6px;height:34px;overflow:hidden;padding:0;margin-bottom:10px}
+#sugg .chip{height:34px;background:var(--c-primary-light);border-color:transparent;color:#166534;font-weight:600}
 .chip b{color:var(--c-primary);margin-right:2px}
 
 .seg{display:flex;background:var(--c-surface);border-radius:var(--radius-s);padding:3px;margin:0 16px 12px}
@@ -243,10 +244,10 @@ function addItem(name,qty=1,cat,extra={}){
 
 /* ===== 描画 ===== */
 function render(){
+  $('#addArea').style.display=$('#chipsArea').style.display=tab==='list'?'block':'none';
   renderShopSel();
   renderSugg();
   document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  $('#addArea').style.display=$('#chipsArea').style.display=tab==='list'?'block':'none';
   $('#main').innerHTML=tab==='list'?listView():favView();
   bindRows();
 }
@@ -279,9 +280,13 @@ function renderSugg(){
   let src=S.hist.filter(h=>!inList.has(h.name));
   if(q){const {name}=parseInput(q);src=src.filter(h=>h.name.includes(name)&&h.name!==name)}
   src.sort((a,b)=>(b.pin-a.pin)||(b.n-a.n));
-  src=src.slice(0,8);
-  $('#sugg').innerHTML=src.map(h=>`<button type="button" class="chip tappable" data-hid="${h.id}"><b>＋</b>${esc(h.name)}</button>`).join('');
-  $('#sugg').style.display=src.length?'flex':'none';
+  src=src.slice(0,12);
+  const el=$('#sugg');
+  el.innerHTML=src.map(h=>`<button type="button" class="chip tappable" data-hid="${h.id}"><b>＋</b>${esc(h.name)}</button>`).join('');
+  el.style.display=src.length?'flex':'none';
+  /* 1段に入りきらず2段目に回った候補は隠す（見えないボタンを触れないようにもする） */
+  const top0=el.children[0]?.offsetTop||0;
+  [...el.children].forEach(c=>{const hid=c.offsetTop>top0+4;c.style.visibility=hid?'hidden':'';c.tabIndex=hid?-1:0;c.setAttribute('aria-hidden',hid?'true':'false')});
 }
 function rowHtml(i){
   const sub=i.memo||'';
@@ -636,6 +641,7 @@ $('#addForm').addEventListener('submit',e=>{
   $('#addInput').value='';renderSugg();
 });
 $('#addInput').addEventListener('input',renderSugg);
+window.addEventListener('resize',renderSugg);
 $('#shopSel').addEventListener('click',e=>{
   if(e.target.closest('[data-shopmgr]')) return openShopMgr();
   const b=e.target.closest('[data-shop]'); if(!b) return;
