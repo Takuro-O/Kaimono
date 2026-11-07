@@ -135,13 +135,13 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
       <h1>🛒 買い物リスト</h1>
       <div class="hbtns">
         <button class="ibtn tappable" id="btnAwake" aria-label="画面をつけたままにする" style="display:none">☀️</button>
-        <button class="ibtn tappable" id="btnShare" aria-label="共有と同期"><span id="syncDot" class="dot"></span>📤</button>
+        <button class="ibtn tappable" id="btnShare" aria-label="共有"><span id="syncDot" class="dot"></span>📤</button>
         <button class="ibtn tappable" id="btnMenu" aria-label="メニュー">⋯</button>
       </div>
     </div>
     <div id="addArea">
       <form class="addbar" id="addForm" autocomplete="off">
-        <input id="addInput" type="text" placeholder="買うものを入力（例：牛乳 2）" enterkeyhint="done" aria-label="商品名">
+        <input id="addInput" type="text" placeholder="買うもの（例：牛乳 2）" enterkeyhint="done" aria-label="商品名">
         <button type="submit" class="tappable">追加</button>
       </form>
       <div class="chips" id="shopSel"></div>
@@ -230,7 +230,7 @@ function addItem(name,qty=1,cat,extra={}){
   name=norm(name); if(!name) return false;
   cat=cat||selShop;
   const ex=vis().find(i=>!i.done&&i.name===name&&i.cat===cat);
-  if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} の数量を ${ex.qty} にしました`);return true}
+  if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} ×${ex.qty}`);return true}
   S.items.push(touch({id:uid(),name,cat,qty,memo:'',done:false,del:false,t:0,...extra}));
   bumpHist(name,cat);save();render();return true;
 }
@@ -251,9 +251,8 @@ function renderShopSel(){
 }
 function openShopMgr(){
   const sh=$('#sheetConfirm');
-  const draw=()=>{sh.innerHTML=`<div class="grab"></div><h2>買う場所を追加</h2><p class="desc">コストコ、薬局など自由に追加できます。</p>
-    <div class="pasterow" style="margin-top:0"><input id="newShop" maxlength="12" placeholder="例：コストコ" aria-label="場所の名前"><button class="tappable" data-ok>追加</button></div>
-    ${customShops.length?`<p class="note">追加した場所（✕で選択肢から外します。その場所の商品は残ります）</p><div class="cats">${customShops.map(n=>`<button class="tappable" data-rm="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div>`:''}
+  const draw=()=>{sh.innerHTML=`<div class="grab"></div><h2>買う場所を追加</h2>    <div class="pasterow" style="margin-top:0"><input id="newShop" maxlength="12" placeholder="例：コストコ" aria-label="場所の名前"><button class="tappable" data-ok>追加</button></div>
+    ${customShops.length?`<p class="note">追加した場所（✕で外す。商品は残る）</p><div class="cats">${customShops.map(n=>`<button class="tappable" data-rm="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div>`:''}
     <button class="btn g tappable" data-x>閉じる</button>`};
   draw();
   sh.onclick=e=>{
@@ -261,7 +260,7 @@ function openShopMgr(){
     if(e.target.closest('[data-ok]')){
       const n=addCustomShop($('#newShop').value); if(!n){$('#newShop').focus();return}
       selShop=n;try{localStorage.setItem(SELK,n)}catch{}
-      renderShopSel();closeAll();haptic();toast(`「${n}」を追加しました`);return;
+      renderShopSel();closeAll();haptic();toast(`「${n}」を追加`);return;
     }
     const rm=e.target.closest('[data-rm]');
     if(rm){customShops=customShops.filter(x=>x!==rm.dataset.rm);saveShops();draw();renderShopSel();}
@@ -288,26 +287,26 @@ function rowHtml(i){
 }
 function listView(){
   const all=vis(), todo=all.filter(i=>!i.done), done=all.filter(i=>i.done);
-  if(!all.length) return `<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の入力欄に商品名を入れて追加しましょう<br>数量は「牛乳 2」のように書けます</p></div>`;
+  if(!all.length) return `<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の欄に入力して追加</p></div>`;
   const pct=Math.round(done.length/all.length*100);
-  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 購入済み</span><span></span></div></div>`;
+  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 買った</span><span></span></div></div>`;
   if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
   shopList().forEach(n=>{
     const its=todo.filter(i=>i.cat===n); if(!its.length) return;
     h+=`<div class="sec-h"><span>${shopE(n)} ${esc(n)}</span><span>${its.length}</span></div><div class="card">${its.map(rowHtml).join('')}</div>`;
   });
-  if(done.length) h+=`<div class="sec-h"><span>✓ 購入済み</span><button data-act="clearDone">まとめて消す</button></div><div class="card">${done.map(rowHtml).join('')}</div>`;
+  if(done.length) h+=`<div class="sec-h"><span>✓ 買った</span><button data-act="clearDone">全部消す</button></div><div class="card">${done.map(rowHtml).join('')}</div>`;
   return h;
 }
 function favView(){
   const inList=new Set(vis().filter(i=>!i.done).map(i=>i.name));
   const hs=[...S.hist].sort((a,b)=>(b.pin-a.pin)||(b.n-a.n));
-  if(!hs.length) return `<div class="empty"><div class="em">⭐</div><p>まだ履歴がありません</p><p>追加した商品が自動でここに貯まります</p></div>`;
-  return `<div class="sec-h"><span>よく買う順（⭐で上に固定）</span></div><div class="card">${hs.map(h=>`
+  if(!hs.length) return `<div class="empty"><div class="em">⭐</div><p>まだありません</p><p>追加した商品が自動でここに並びます</p></div>`;
+  return `<div class="sec-h"><span>よく買う順（⭐で固定）</span></div><div class="card">${hs.map(h=>`
     <div class="hrowx"><button class="star tappable ${h.pin?'on':''}" data-pin="${h.id}">⭐</button>
     <div class="nm">${esc(h.name)}</div><span class="sub" style="flex:none">${esc(h.cat)} ・ ${h.n}回</span>
     <button class="add tappable ${inList.has(h.name)?'in':''}" data-hadd="${h.id}">${inList.has(h.name)?'追加済':'＋追加'}</button></div>`).join('')}</div>
-    <div style="text-align:center;margin-top:16px"><button class="chip tappable" data-act="clearHist">履歴を消去</button></div>`;
+    <div style="text-align:center;margin-top:16px"><button class="chip tappable" data-act="clearHist">履歴を消す</button></div>`;
 }
 
 /* ===== スワイプ削除 ===== */
@@ -330,7 +329,7 @@ function bindRows(){
 function removeItem(id){
   const it=S.items.find(i=>i.id===id&&!i.del); if(!it) return;
   it.del=true;touch(it);save();render();
-  toast(`${it.name} を削除しました`,{label:'元に戻す',fn:()=>{it.del=false;touch(it);save();render()}});
+  toast(`${it.name}を削除`,{label:'元に戻す',fn:()=>{it.del=false;touch(it);save();render()}});
 }
 
 /* ===== トースト ===== */
@@ -357,7 +356,7 @@ function openEdit(id){
     <div class="fld"><label>数量</label><div class="stp"><button class="tappable" data-q="-1">−</button><span id="eQty">${i.qty}</span><button class="tappable" data-q="1">＋</button></div></div>
     <div class="fld"><label>買う場所</label><div class="cats" id="eCats">${shopChips(i.cat)}</div>
       <div class="pasterow"><input id="eNewShop" maxlength="12" placeholder="新しい場所（例：コストコ）" aria-label="新しい場所"><button class="tappable" data-addshop>追加</button></div></div>
-    <div class="fld"><label>メモ（任意）</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
+    <div class="fld"><label>メモ</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
     <button class="btn p tappable" data-save>保存</button>
     <button class="btn g tappable" data-del>削除</button>`;
   sh.onclick=e=>{
@@ -375,7 +374,7 @@ function openEdit(id){
       const tgt=S.items.find(x=>x.id===id);
       if(tgt){Object.assign(tgt,{name:nm,qty:editing.qty,cat:editing.cat,memo:norm($('#eMemo').value)});touch(tgt)}
       const h=S.hist.find(x=>x.name===nm);if(h)h.cat=editing.cat;
-      save();render();closeAll();haptic();toast('保存しました');
+      save();render();closeAll();haptic();toast('保存');
     }
     else if(e.target.closest('[data-del]')){closeAll();removeItem(id)}
   };
@@ -508,7 +507,7 @@ function connect(){
 }
 async function syncStart(){
   if(!SY.room){setStatus('off');return}
-  if(!window.crypto?.subtle){setStatus('off');toast('この環境では同期を使えません（https のページで開いてください）');return}
+  if(!window.crypto?.subtle){setStatus('off');toast('この開き方では共有できません');return}
   topic='kaimono-'+hex(await sha('topic:'+SY.room)).slice(0,40);
   aesKey=await crypto.subtle.importKey('raw',await sha('key:'+SY.room),'AES-GCM',false,['encrypt','decrypt']);
   connect();
@@ -537,60 +536,60 @@ async function copy(t){
 }
 function openShare(){
   const on=!!SY.room;
-  const st={on:'リアルタイム同期中',connecting:'接続しています…',off:'同期はオフです'}[on?syncStatus:'off'];
+  const st={on:'共有中',connecting:'接続中…',off:'共有していません'}[on?syncStatus:'off'];
   $('#sheetShare').innerHTML=`<div class="grab"></div>
-    <h2>${on?'家族と共有中':'家族とリアルタイム共有'}</h2>
+    <h2>共有</h2>
     ${on?`<div class="stat"><span class="dot ${syncStatus==='on'?'on':syncStatus==='connecting'?'connecting':''}"></span>${st}</div>
-      <p class="desc">招待リンクを開いた人と、リストが自動で同期されます。</p>
+      <p class="desc">招待リンクを開いた人と、リストがいつも同じになります。</p>
       <button class="btn p tappable" data-s="invite">📤 招待リンクを送る</button>
-      <button class="btn s tappable" data-s="copylink">🔗 招待リンクをコピー</button>
-      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>
-      <button class="btn g tappable" data-s="leave" style="color:var(--c-danger)">同期をやめる</button>`
-    :`<p class="desc">アカウント登録は不要です。はじめると招待リンクができ、それを開いた人とリストが自動で同期されます。</p>
+      <button class="btn s tappable" data-s="copylink">🔗 リンクをコピー</button>
+      <button class="btn s tappable" data-s="text">📋 テキストでコピー</button>
+      <button class="btn g tappable" data-s="leave" style="color:var(--c-danger)">共有をやめる</button>`
+    :`<p class="desc">招待リンクを開いた人と、リストがいつも同じになります。登録は不要です。</p>
       <button class="btn p tappable" data-s="start">🔗 共有をはじめる</button>
-      <button class="btn s tappable" data-s="text">📋 リストをテキストでコピー</button>
-      <p class="note" style="margin-top:16px">招待リンクをもらっている場合は、ここに貼り付けて参加できます（ホーム画面のアプリはこちら）。</p>
+      <button class="btn s tappable" data-s="text">📋 テキストでコピー</button>
+      <p class="note" style="margin-top:16px">招待リンクをもらったら、ここに貼り付け。</p>
       <div class="pasterow"><input id="joinInput" placeholder="招待リンクを貼り付け" aria-label="招待リンク"><button class="tappable" data-s="join">参加</button></div>`}
     <button class="btn g tappable" data-close2>閉じる</button>
-    <p class="note">内容は端末で暗号化してから送られ、中継サーバーには読めません。招待リンクを知っている人は誰でも参加できるので、家族以外には送らないでください。</p>`;
+    <p class="note">リンクを知っている人は誰でも参加できます。家族以外には送らないでください。</p>`;
   const sh=$('#sheetShare');
   sh.onclick=async e=>{
     if(e.target.closest('[data-close2]')) return closeAll();
     const b=e.target.closest('[data-s]'); if(!b) return;
     const a=b.dataset.s;
     if(a==='text'){
-      if(!vis().some(i=>!i.done)){toast('未購入の商品がありません');return}
-      copy(listText()).then(()=>{toast('コピーしました');closeAll()});
+      if(!vis().some(i=>!i.done)){toast('買うものがありません');return}
+      copy(listText()).then(()=>{toast('コピーした');closeAll()});
     }else if(a==='start'){
-      if(!window.crypto?.subtle){toast('https のページで開いてください');return}
+      if(!window.crypto?.subtle){toast('この開き方では共有できません');return}
       SY.room=newRoom();saveSY();
       await syncStart();haptic();openShare();
     }else if(a==='join'){
       const m=($('#joinInput').value||'').match(/[0-9a-f]{32}/);
-      if(!m){toast('招待リンクが読み取れません');return}
+      if(!m){toast('リンクを読み取れません');return}
       closeAll();askJoin(m[0]);
     }else if(a==='copylink'){
-      copy(inviteUrl()).then(()=>toast('招待リンクをコピーしました'));
+      copy(inviteUrl()).then(()=>toast('リンクをコピーした'));
     }else if(a==='invite'){
       const url=inviteUrl();
-      if(navigator.share){try{await navigator.share({title:'買い物リストに参加',text:'買い物リストを一緒に使おう。このリンクを開くと同期されます。',url})}catch{}}
-      else copy(url).then(()=>toast('招待リンクをコピーしました'));
+      if(navigator.share){try{await navigator.share({title:'買い物リストに参加',text:'買い物リストを一緒に使おう。リンクを開いて参加してね。',url})}catch{}}
+      else copy(url).then(()=>toast('リンクをコピーした'));
     }else if(a==='leave'){
       closeAll();
-      confirmSheet({title:'同期をやめますか？',msg:'この端末のリストはそのまま残ります。他の端末とは同期されなくなります。',label:'やめる',onOk:()=>{syncStop();toast('同期をやめました')}});
+      confirmSheet({title:'共有をやめますか？',msg:'この端末のリストは残ります。',label:'やめる',onOk:()=>{syncStop();toast('共有をやめた')}});
     }
   };
   openOv('#ovShare');
 }
 function askJoin(code){
-  if(SY.room===code){toast('すでにこのリストと同期中です');return}
-  if(!window.crypto?.subtle){toast('https のページで開いてください');return}
-  confirmSheet({title:'共有リストに参加しますか？',
-    msg:(SY.room?'今の同期先から、この招待先に切り替わります。':'')+'参加すると、この端末のリストも相手と共有され、以後は自動で同期されます。',
+  if(SY.room===code){toast('すでに共有中');return}
+  if(!window.crypto?.subtle){toast('この開き方では共有できません');return}
+  confirmSheet({title:'共有に参加しますか？',
+    msg:(SY.room?'今の共有から切り替わります。':'')+'この端末のリストも相手と共有されます。',
     label:'参加する',danger:false,onOk:async()=>{
       SY.room=code;saveSY();seen={};
       S.items.forEach(i=>dirty.add(i.id));
-      await syncStart();toast('参加しました');
+      await syncStart();toast('参加した');
     }});
 }
 function checkIncoming(){
@@ -602,9 +601,9 @@ function checkIncoming(){
 /* ===== メニュー ===== */
 function openMenu(){
   $('#sheetMenu').innerHTML=`<div class="grab"></div>
-    <button class="mrow tappable" data-m="clearDone"><span>✓</span><span>購入済みをまとめて消す</span></button>
-    <button class="mrow tappable" data-m="reimport"><span>📥</span><span>旧版のデータを取り込む</span></button>
-    <button class="mrow tappable" data-m="clearAll" style="color:var(--c-danger)"><span>🗑</span><span>リストを全件削除</span></button>
+    <button class="mrow tappable" data-m="clearDone"><span>✓</span><span>買ったものを消す</span></button>
+    <button class="mrow tappable" data-m="reimport"><span>📥</span><span>前のアプリのデータを取り込む</span></button>
+    <button class="mrow tappable" data-m="clearAll" style="color:var(--c-danger)"><span>🗑</span><span>全部消す</span></button>
     <button class="btn g tappable" data-close2>閉じる</button>`;
   $('#sheetMenu').onclick=e=>{
     if(e.target.closest('[data-close2]')) return closeAll();
@@ -612,14 +611,14 @@ function openMenu(){
     closeAll();
     if(m==='clearDone') doClearDone();
     if(m==='reimport') migrateOld(true);
-    if(m==='clearAll') confirmSheet({title:'リストを全件削除しますか？',msg:'同期中の場合は、共有している全員のリストからも消えます。',label:'削除する',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
+    if(m==='clearAll') confirmSheet({title:'全部消しますか？',msg:'共有中は、相手のリストからも消えます。',label:'消す',onOk:()=>{vis().forEach(i=>{i.del=true;touch(i)});save();render()}});
   };
   openOv('#ovMenu');
 }
 function doClearDone(){
-  const done=vis().filter(i=>i.done); if(!done.length){toast('購入済みの商品はありません');return}
+  const done=vis().filter(i=>i.done); if(!done.length){toast('買ったものはありません');return}
   done.forEach(i=>{i.del=true;touch(i)});save();render();
-  toast(`${done.length}件を消しました`,{label:'元に戻す',fn:()=>{done.forEach(i=>{i.del=false;touch(i)});save();render()}});
+  toast(`${done.length}件を消した`,{label:'元に戻す',fn:()=>{done.forEach(i=>{i.del=false;touch(i)});save();render()}});
 }
 
 /* ===== イベント ===== */
@@ -653,7 +652,7 @@ $('#main').addEventListener('click',e=>{
   const ha=t.closest('[data-hadd]');if(ha){const h=S.hist.find(x=>x.id===ha.dataset.hadd);if(h&&!vis().some(i=>!i.done&&i.name===h.name)){addItem(h.name,1,h.cat);haptic()}return}
   const act=t.closest('[data-act]')?.dataset.act;
   if(act==='clearDone')doClearDone();
-  if(act==='clearHist')confirmSheet({title:'履歴を消去しますか？',msg:'「よく買うもの」の候補がすべて消えます。リストは消えません。',label:'消去する',onOk:()=>{S.hist=[];save();render()}});
+  if(act==='clearHist')confirmSheet({title:'履歴を消しますか？',msg:'よく買うものの候補が消えます。',label:'消す',onOk:()=>{S.hist=[];save();render()}});
 });
 $('#btnShare').addEventListener('click',openShare);
 $('#btnMenu').addEventListener('click',openMenu);
@@ -672,13 +671,13 @@ async function applyAwake(showErr){
     if(awakeOn()&&document.visibilityState==='visible'){
       if(!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}
     }else if(wl){await wl.release();wl=null}
-  }catch{wl=null;if(showErr&&awakeOn())toast('端末の設定で画面の常時点灯が許可されていません')}
+  }catch{wl=null;if(showErr&&awakeOn())toast('画面を消さない設定にできませんでした')}
 }
 $('#btnAwake').addEventListener('click',()=>{
   const on=!awakeOn();
   try{localStorage.setItem(AWAKE,on?'1':'0')}catch{}
   haptic();applyAwake(true);
-  toast(on?'☀️ 画面をつけたままにします':'画面は通常どおり消えます');
+  toast(on?'画面を消さない：オン':'画面を消さない：オフ');
 });
 document.addEventListener('visibilitychange',()=>applyAwake(false));
 
@@ -738,8 +737,8 @@ async function migrateOld(force){
   }catch{}
   try{localStorage.setItem(MK,'1')}catch{}
   save();render();
-  if(total) toast(`旧版から ${total} 件を引き継ぎました`);
-  else if(force) toast(found?'新しく取り込む商品はありませんでした':'この端末に旧版のデータが見つかりません');
+  if(total) toast(`前のアプリから${total}件を取り込んだ`);
+  else if(force) toast(found?'新しく取り込むものはありません':'この端末に前のアプリのデータはありません');
 }
 
 render();
