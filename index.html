@@ -41,6 +41,8 @@ header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);backdr
 .chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;height:32px;padding:0 12px;border:1px solid var(--c-border);background:#fff;border-radius:16px;font-size:14px;white-space:nowrap}
+.chip.sel{background:var(--c-primary);border-color:var(--c-primary);color:#fff;font-weight:700}
+.chips .lbl{flex:none;align-self:center;font-size:12px;color:var(--c-sub);margin-right:-2px}
 .chip b{color:var(--c-primary);margin-right:2px}
 
 .seg{display:flex;background:var(--c-surface);border-radius:var(--radius-s);padding:3px;margin:0 16px 12px}
@@ -142,6 +144,7 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
         <input id="addInput" type="text" placeholder="買うものを入力（例：牛乳 2）" enterkeyhint="done" aria-label="商品名">
         <button type="submit" class="tappable">追加</button>
       </form>
+      <div class="chips" id="shopSel"></div>
       <div class="chips" id="sugg"></div>
     </div>
   </header>
@@ -163,22 +166,22 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 <script>
 /* ===== データ ===== */
 const KEY='kaimono2_v1';
-const CATS=[
-  {id:'veg',n:'野菜・果物',e:'🥬'},{id:'meat',n:'肉・魚',e:'🥩'},{id:'dairy',n:'乳製品・卵',e:'🥛'},
-  {id:'staple',n:'パン・主食',e:'🍞'},{id:'drink',n:'飲料',e:'🧃'},{id:'season',n:'調味料・乾物',e:'🧂'},
-  {id:'frozen',n:'冷凍・惣菜',e:'🍱'},{id:'daily',n:'日用品',e:'🧻'},{id:'other',n:'その他',e:'📦'}
-];
-const DICT={
-  veg:['にんじん','人参','玉ねぎ','たまねぎ','じゃがいも','キャベツ','レタス','トマト','きゅうり','なす','ピーマン','ねぎ','ほうれん草','白菜','大根','もやし','ブロッコリー','きのこ','しいたけ','バナナ','りんご','みかん','いちご','レモン','アボカド','野菜','果物','にんにく','しょうが'],
-  meat:['肉','豚','牛','鶏','ひき肉','ベーコン','ハム','ソーセージ','魚','鮭','サバ','さば','まぐろ','刺身','えび','いか','ツナ'],
-  dairy:['牛乳','卵','たまご','ヨーグルト','チーズ','バター','豆腐','納豆','生クリーム'],
-  staple:['パン','食パン','米','ご飯','パスタ','うどん','そば','ラーメン','麺','小麦粉','シリアル','もち'],
-  drink:['お茶','水','ジュース','コーヒー','紅茶','ビール','ワイン','炭酸','コーラ','麦茶','酒','ミルク'],
-  season:['醤油','しょうゆ','味噌','みそ','砂糖','塩','油','酢','みりん','だし','ソース','マヨネーズ','ケチャップ','ドレッシング','カレー','スパイス','こしょう','海苔','のり','ふりかけ'],
-  frozen:['冷凍','アイス','惣菜','弁当','餃子','ピザ','コロッケ','からあげ'],
-  daily:['ティッシュ','トイレット','洗剤','シャンプー','リンス','歯磨き','歯ブラシ','石鹸','ハンドソープ','ゴミ袋','ラップ','アルミホイル','スポンジ','電池','マスク','柔軟剤','キッチンペーパー','おむつ','生理']
-};
-const catOf=id=>CATS.find(c=>c.id===id)||CATS[CATS.length-1];
+/* 「買う場所」で分類する。cat には場所の名前をそのまま入れるので、端末ごとに増やしても同期で自然に伝わる */
+const SHOPS=[{n:'スーパー',e:'🏪'},{n:'Amazon',e:'📦'},{n:'セリア',e:'🧺'},{n:'ダイソー',e:'🛍️'},{n:'その他',e:'🛒'}];
+const SHOP_E=Object.fromEntries(SHOPS.map(x=>[x.n,x.e]));
+const shopE=n=>SHOP_E[n]||'🏬';
+const LEGACY=new Set(['veg','meat','dairy','staple','drink','season','frozen','daily','other']);
+/* 旧「売り場」の値は「スーパー」に寄せる。旧版から引き継いだ店名（Amazon等）はメモに入っているので拾って移す */
+function fixShop(cat,memo){
+  memo=String(memo||'');
+  if(LEGACY.has(cat)){
+    const segs=memo.split(' ・ ').filter(Boolean);let n='スーパー';
+    const k=segs.findIndex(x=>x==='Amazon'||x==='その他');
+    if(k>=0){n=segs[k];segs.splice(k,1)}
+    return {cat:n,memo:segs.join(' ・ ')};
+  }
+  return {cat:String(cat||'').replace(/\s+/g,' ').trim().slice(0,12)||'スーパー',memo};
+}
 const defState=()=>({items:[],hist:[]});
 let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&Array.isArray(d.items)?{items:d.items,hist:d.hist||[]}:defState()}catch{return defState()}})();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch{}};
@@ -188,6 +191,22 @@ S.items.forEach(i=>{i.t=+i.t||0;i.del=!!i.del});
 S.items=S.items.filter(i=>!(i.del&&i.t<Date.now()-30*864e5));
 S.items.forEach(i=>{if(i.who){i.memo=[i.who,i.memo].filter(Boolean).join(' ・ ').slice(0,100);delete i.who;i.t=Math.max(Date.now(),i.t+1)}else delete i.who;delete i.price});
 const vis=()=>S.items.filter(i=>!i.del);
+S.items.forEach(i=>{const f=fixShop(i.cat,i.memo);if(f.cat!==i.cat||f.memo!==(i.memo||'')){i.cat=f.cat;i.memo=f.memo;i.t=Math.max(Date.now(),i.t+1)}});
+S.hist.forEach(h=>{h.cat=fixShop(h.cat,'').cat});
+const SHK='kaimono2_shops',SELK='kaimono2_shop';
+let customShops=(()=>{try{const a=JSON.parse(localStorage.getItem(SHK));return Array.isArray(a)?a.map(x=>String(x).slice(0,12)):[]}catch{return[]}})();
+const saveShops=()=>{try{localStorage.setItem(SHK,JSON.stringify(customShops))}catch{}};
+let selShop=(()=>{try{return localStorage.getItem(SELK)}catch{return null}})()||'スーパー';
+function shopList(){
+  const out=SHOPS.map(x=>x.n);
+  [...customShops,...vis().map(i=>i.cat)].forEach(n=>{if(n&&!out.includes(n))out.push(n)});
+  return out;
+}
+function addCustomShop(n){
+  n=norm(String(n||'')).slice(0,12); if(!n) return '';
+  if(!shopList().includes(n)){customShops.push(n);saveShops()}
+  return n;
+}
 const touch=i=>{i.t=Math.max(Date.now(),(i.t||0)+1);markDirty(i.id);return i};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -196,11 +215,6 @@ const norm=s=>s.trim().replace(/\s+/g,' ');
 
 let tab='list';
 
-function guessCat(name){
-  const h=S.hist.find(x=>x.name===name); if(h) return h.cat;
-  for(const [cat,words] of Object.entries(DICT)) if(words.some(w=>name.includes(w))) return cat;
-  return 'other';
-}
 function parseInput(raw){
   let s=norm(raw), qty=1;
   const m=s.match(/^(.*?)[\s　]*[x×＊*]?\s*(\d{1,2})\s*(個|本|袋|パック|つ|枚|丁|缶)?$/);
@@ -213,20 +227,44 @@ function bumpHist(name,cat){
 }
 function addItem(name,qty=1,cat,extra={}){
   name=norm(name); if(!name) return false;
-  const ex=vis().find(i=>!i.done&&i.name===name);
+  cat=cat||selShop;
+  const ex=vis().find(i=>!i.done&&i.name===name&&i.cat===cat);
   if(ex){ex.qty=Math.min(99,ex.qty+qty);touch(ex);save();render();toast(`${name} の数量を ${ex.qty} にしました`);return true}
-  cat=cat||guessCat(name);
   S.items.push(touch({id:uid(),name,cat,qty,memo:'',done:false,del:false,t:0,...extra}));
   bumpHist(name,cat);save();render();return true;
 }
 
 /* ===== 描画 ===== */
 function render(){
+  renderShopSel();
   renderSugg();
   document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   $('#addArea').style.display=tab==='list'?'block':'none';
   $('#main').innerHTML=tab==='list'?listView():favView();
   bindRows();
+}
+function renderShopSel(){
+  if(!shopList().includes(selShop)) selShop='スーパー';
+  $('#shopSel').innerHTML='<span class="lbl">追加先</span>'+shopList().map(n=>`<button type="button" class="chip tappable ${n===selShop?'sel':''}" data-shop="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('')+'<button type="button" class="chip tappable" data-shopmgr aria-label="場所を追加・整理">＋</button>';
+}
+function openShopMgr(){
+  const sh=$('#sheetConfirm');
+  const draw=()=>{sh.innerHTML=`<div class="grab"></div><h2>買う場所を追加</h2><p class="desc">コストコ、薬局など自由に追加できます。</p>
+    <div class="pasterow" style="margin-top:0"><input id="newShop" maxlength="12" placeholder="例：コストコ" aria-label="場所の名前"><button class="tappable" data-ok>追加</button></div>
+    ${customShops.length?`<p class="note">追加した場所（✕で選択肢から外します。その場所の商品は残ります）</p><div class="cats">${customShops.map(n=>`<button class="tappable" data-rm="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div>`:''}
+    <button class="btn g tappable" data-x>閉じる</button>`};
+  draw();
+  sh.onclick=e=>{
+    if(e.target.closest('[data-x]')) return closeAll();
+    if(e.target.closest('[data-ok]')){
+      const n=addCustomShop($('#newShop').value); if(!n){$('#newShop').focus();return}
+      selShop=n;try{localStorage.setItem(SELK,n)}catch{}
+      renderShopSel();closeAll();haptic();toast(`「${n}」を追加しました`);return;
+    }
+    const rm=e.target.closest('[data-rm]');
+    if(rm){customShops=customShops.filter(x=>x!==rm.dataset.rm);saveShops();draw();renderShopSel();}
+  };
+  open('#ovConfirm');
 }
 function renderSugg(){
   const q=norm($('#addInput').value||'');
@@ -252,9 +290,9 @@ function listView(){
   const pct=Math.round(done.length/all.length*100);
   let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 購入済み</span><span></span></div></div>`;
   if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
-  CATS.forEach(c=>{
-    const its=todo.filter(i=>i.cat===c.id); if(!its.length) return;
-    h+=`<div class="sec-h"><span>${c.e} ${c.n}</span><span>${its.length}</span></div><div class="card">${its.map(rowHtml).join('')}</div>`;
+  shopList().forEach(n=>{
+    const its=todo.filter(i=>i.cat===n); if(!its.length) return;
+    h+=`<div class="sec-h"><span>${shopE(n)} ${esc(n)}</span><span>${its.length}</span></div><div class="card">${its.map(rowHtml).join('')}</div>`;
   });
   if(done.length) h+=`<div class="sec-h"><span>✓ 購入済み</span><button data-act="clearDone">まとめて消す</button></div><div class="card">${done.map(rowHtml).join('')}</div>`;
   return h;
@@ -265,7 +303,7 @@ function favView(){
   if(!hs.length) return `<div class="empty"><div class="em">⭐</div><p>まだ履歴がありません</p><p>追加した商品が自動でここに貯まります</p></div>`;
   return `<div class="sec-h"><span>よく買う順（⭐で上に固定）</span></div><div class="card">${hs.map(h=>`
     <div class="hrowx"><button class="star tappable ${h.pin?'on':''}" data-pin="${h.id}">⭐</button>
-    <div class="nm">${esc(h.name)}</div><span class="sub" style="flex:none">${catOf(h.cat).e} ${h.n}回</span>
+    <div class="nm">${esc(h.name)}</div><span class="sub" style="flex:none">${esc(h.cat)} ・ ${h.n}回</span>
     <button class="add tappable ${inList.has(h.name)?'in':''}" data-hadd="${h.id}">${inList.has(h.name)?'追加済':'＋追加'}</button></div>`).join('')}</div>
     <div style="text-align:center;margin-top:16px"><button class="chip tappable" data-act="clearHist">履歴を消去</button></div>`;
 }
@@ -307,6 +345,7 @@ const closeAll=()=>{document.querySelectorAll('.ov').forEach(o=>o.classList.remo
 document.querySelectorAll('[data-close]').forEach(e=>e.addEventListener('click',closeAll));
 
 let editing=null;
+const shopChips=cur=>shopList().map(n=>`<button class="tappable ${n===cur?'on':''}" data-cat="${esc(n)}">${shopE(n)} ${esc(n)}</button>`).join('');
 function openEdit(id){
   const i=S.items.find(x=>x.id===id&&!x.del); if(!i) return;
   editing={...i};
@@ -314,14 +353,20 @@ function openEdit(id){
   sh.innerHTML=`<div class="grab"></div><h2>商品を編集</h2><p class="desc">&nbsp;</p>
     <div class="fld"><label>商品名</label><input id="eName" value="${esc(i.name)}"></div>
     <div class="fld"><label>数量</label><div class="stp"><button class="tappable" data-q="-1">−</button><span id="eQty">${i.qty}</span><button class="tappable" data-q="1">＋</button></div></div>
-    <div class="fld"><label>売り場</label><div class="cats">${CATS.map(c=>`<button class="tappable ${c.id===i.cat?'on':''}" data-cat="${c.id}">${c.e} ${c.n}</button>`).join('')}</div></div>
+    <div class="fld"><label>買う場所</label><div class="cats" id="eCats">${shopChips(i.cat)}</div>
+      <div class="pasterow"><input id="eNewShop" maxlength="12" placeholder="新しい場所（例：コストコ）" aria-label="新しい場所"><button class="tappable" data-addshop>追加</button></div></div>
     <div class="fld"><label>メモ（任意）</label><input id="eMemo" value="${esc(i.memo)}" placeholder="例：特売の方"></div>
     <button class="btn p tappable" data-save>保存</button>
     <button class="btn g tappable" data-del>削除</button>`;
   sh.onclick=e=>{
     const q=e.target.closest('[data-q]'),c=e.target.closest('[data-cat]');
     if(q){editing.qty=Math.min(99,Math.max(1,editing.qty+ +q.dataset.q));$('#eQty').textContent=editing.qty;haptic()}
-    else if(c){editing.cat=c.dataset.cat;sh.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('on',b.dataset.cat===editing.cat));haptic()}
+    else if(c){editing.cat=c.dataset.cat;$('#eCats').innerHTML=shopChips(editing.cat);haptic()}
+    else if(e.target.closest('[data-addshop]')){
+      const n=addCustomShop($('#eNewShop').value);
+      if(!n){$('#eNewShop').focus();return}
+      editing.cat=n;$('#eNewShop').value='';$('#eCats').innerHTML=shopChips(n);haptic();
+    }
     else if(e.target.closest('[data-save]')){
       const nm=norm($('#eName').value);
       if(!nm){$('#eName').style.borderColor='var(--c-danger)';return}
@@ -375,8 +420,9 @@ async function openMsg(s){
 }
 const wire=i=>({id:i.id,name:i.name,cat:i.cat,qty:i.qty,memo:i.memo,done:!!i.done,del:!!i.del,t:i.t});
 function clean(r){
-  return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:CATS.some(c=>c.id===r.cat)?r.cat:'other',
-    qty:Math.min(99,Math.max(1,+r.qty||1)),memo:[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ ').slice(0,100),
+  const f=fixShop(r.cat,[String(r.who||'').slice(0,20),String(r.memo||'')].filter(Boolean).join(' ・ '));
+  return {id:String(r.id||'').slice(0,24),name:String(r.name||'').slice(0,60),cat:f.cat,
+    qty:Math.min(99,Math.max(1,+r.qty||1)),memo:f.memo.slice(0,100),
     done:!!r.done,del:!!r.del,t:+r.t||0};
 }
 const newer=(a,b)=>a.t>b.t||(a.t===b.t&&JSON.stringify(a)>JSON.stringify(b));
@@ -478,7 +524,7 @@ window.addEventListener('online',()=>{if(hasSync()) connect()});
 function listText(){
   const todo=vis().filter(i=>!i.done);
   let t='🛒 買い物リスト\n';
-  CATS.forEach(c=>{const its=todo.filter(i=>i.cat===c.id);if(!its.length)return;t+=`\n${c.e}${c.n}\n`+its.map(i=>`・${i.name}${i.qty>1?' ×'+i.qty:''}${i.memo?'（'+i.memo+'）':''}`).join('\n')+'\n'});
+  shopList().forEach(n=>{const its=todo.filter(i=>i.cat===n);if(!its.length)return;t+=`\n${shopE(n)}${n}\n`+its.map(i=>`・${i.name}${i.qty>1?' ×'+i.qty:''}${i.memo?'（'+i.memo+'）':''}`).join('\n')+'\n'});
   return t;
 }
 async function copy(t){
@@ -582,6 +628,12 @@ $('#addForm').addEventListener('submit',e=>{
   $('#addInput').value='';renderSugg();
 });
 $('#addInput').addEventListener('input',renderSugg);
+$('#shopSel').addEventListener('click',e=>{
+  if(e.target.closest('[data-shopmgr]')) return openShopMgr();
+  const b=e.target.closest('[data-shop]'); if(!b) return;
+  selShop=b.dataset.shop;try{localStorage.setItem(SELK,selShop)}catch{}
+  renderShopSel();haptic();
+});
 $('#sugg').addEventListener('click',e=>{
   const b=e.target.closest('[data-hid]');if(!b)return;
   const h=S.hist.find(x=>x.id===b.dataset.hid);if(h){addItem(h.name,1,h.cat);haptic()}
@@ -636,9 +688,8 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
    同じURLで動いていた旧版が端末に残したデータ（と、あれば JSONBin の最新データ）を取り込む。
    id は 'o_'+旧id で固定なので、何度実行しても重複しない。 */
 const MK='kaimono2_migrated';
-const OLD_CAT={vegfruit:'veg',meat:'meat',dairy:'dairy',bread:'staple',frozen:'frozen',drink:'drink',daily:'daily',other:'other'};
 const OLD_WHO={takuro:'たくろう',yuka:'ゆか'};
-const OLD_SHOP={amazon:'Amazon',other:'その他'};
+const OLD_SHOP={super:'スーパー',amazon:'Amazon',other:'その他'};
 function importOld(items,templates){
   let n=0;const now=Date.now();
   const arr=a=>Array.isArray(a)?a:[];
@@ -650,8 +701,8 @@ function importOld(items,templates){
     if(S.items.some(i=>i.id===id)) continue;
     const unit=String(o.unit||''),q=Math.round(+o.qty||1);
     const plain=!unit||unit==='個';
-    const memo=[OLD_WHO[o.person]||'',OLD_SHOP[o.shop]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
-    const cat=OLD_CAT[o.category]||'other';
+    const memo=[OLD_WHO[o.person]||'',plain?'':(q>0?q+unit:''),String(o.note||'')].filter(Boolean).join(' ・ ').slice(0,100);
+    const cat=OLD_SHOP[o.shop]||'スーパー';
     S.items.push(touch({id,name,cat,qty:plain?Math.min(99,Math.max(1,q)):1,
       memo,done:!!o.done,del:false,t:0}));
     if(!S.hist.some(h=>h.name===name)) S.hist.push({id:uid(),name,cat,n:1,pin:false});
@@ -661,7 +712,7 @@ function importOld(items,templates){
     if(!o||typeof o!=='object'||o.deleted) continue;
     const name=norm(String(o.name||'')).slice(0,60); if(!name) continue;
     const h=S.hist.find(x=>x.name===name);
-    if(h) h.pin=true; else S.hist.push({id:uid(),name,cat:OLD_CAT[o.category]||guessCat(name),n:1,pin:true});
+    if(h) h.pin=true; else S.hist.push({id:uid(),name,cat:OLD_SHOP[o.shop]||'スーパー',n:1,pin:true});
   }
   return n;
 }
