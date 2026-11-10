@@ -124,6 +124,8 @@ main{flex:1;padding:12px 0 calc(24px + env(safe-area-inset-bottom))}
 @keyframes pulse{50%{opacity:.3}}
 #btnAwake{opacity:.3;transition:opacity var(--transition)}
 #btnAwake.on{opacity:1;background:#fef9c3}
+.joincard{margin:12px 0;padding:14px;border-radius:var(--radius);background:var(--c-card,#fff);border:1.5px solid var(--c-primary)}
+.joincard b{font-size:15px}.joincard p{font-size:13px;color:var(--c-sub);margin:4px 0 10px}
 .pasterow{display:flex;gap:8px;margin-top:10px}
 .pasterow input{flex:1;min-width:0;height:44px;padding:0 12px;border:1.5px solid var(--c-border);border-radius:var(--radius-s);outline:none}
 .pasterow input:focus{border-color:var(--c-primary)}
@@ -331,9 +333,9 @@ function rowHtml(i){
 }
 function listView(){
   const all=vis(), todo=all.filter(i=>!i.done), done=all.filter(i=>i.done);
-  if(!all.length) return `<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の欄に入力して追加</p></div>`;
+  if(!all.length) return joinCard()+`<div class="empty"><div class="em">🛒</div><p>リストは空です</p><p>上の欄に入力して追加</p></div>`;
   const pct=Math.round(done.length/all.length*100);
-  let h=`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 買った</span><span></span></div></div>`;
+  let h=joinCard()+`<div class="progress"><div class="bar"><i style="width:${pct}%"></i></div><div class="meta"><span>${done.length} / ${all.length} 買った</span><span></span></div></div>`;
   if(!todo.length) h+=`<div class="empty" style="padding:28px 24px"><div class="em">🎉</div><p>全部買えました！</p></div>`;
   const groups=shopList().filter(n=>todo.some(i=>i.cat===n));
   groups.forEach(n=>{
@@ -645,7 +647,7 @@ function openShare(){
     }else if(a==='join'){
       const m=($('#joinInput').value||'').match(/[0-9a-f]{32}/);
       if(!m){toast('リンクを読み取れません');return}
-      closeAll();askJoin(m[0]);
+      closeAll();askJoin(m[0],true);
     }else if(a==='resync'){
       SY.needHello=true;saveSY();connect();closeAll();toast('更新中…');
     }else if(a==='copylink'){
@@ -661,16 +663,25 @@ function openShare(){
   };
   openOv('#ovShare');
 }
-function askJoin(code){
+async function doJoin(code){
+  SY.room=code;SY.needHello=true;saveSY();seen={};
+  S.items.forEach(i=>dirty.add(i.id));
+  await syncStart();toast('参加した');render();
+}
+function askJoin(code,direct){
   if(SY.room===code){toast('すでに共有中');return}
   if(!window.crypto?.subtle){toast('この開き方では共有できません');return}
+  if(direct&&!SY.room&&!vis().length){doJoin(code);return}
   confirmSheet({title:'共有に参加しますか？',
     msg:(SY.room?'今の共有から切り替わります。':'')+'この端末のリストも相手と共有されます。',
-    label:'参加する',danger:false,onOk:async()=>{
-      SY.room=code;SY.needHello=true;saveSY();seen={};
-      S.items.forEach(i=>dirty.add(i.id));
-      await syncStart();toast('参加した');
-    }});
+    label:'参加する',danger:false,onOk:()=>doJoin(code)});
+}
+const isApp=()=>navigator.standalone===true||(window.matchMedia?.('(display-mode: standalone)').matches);
+function joinCard(){
+  if(SY.room||!(isApp()||!vis().length)) return '';
+  return `<div class="joincard"><b>家族のリストに参加</b><p>招待リンクをコピーして、下のボタンを押す</p>
+    <button class="btn p tappable" data-join="clip">📋 コピーしたリンクで参加</button>
+    <div class="pasterow"><input id="joinMain" placeholder="リンクをここに貼り付け" aria-label="招待リンク"><button class="tappable" data-join="field">参加</button></div></div>`;
 }
 function checkIncoming(){
   const m=location.hash.match(/^#r=([0-9a-f]{32})$/); if(!m) return;
@@ -724,8 +735,17 @@ $('#sugg').addEventListener('click',e=>{
 document.querySelector('.seg').addEventListener('click',e=>{
   const b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;render();window.scrollTo(0,0);
 });
-$('#main').addEventListener('click',e=>{
+$('#main').addEventListener('click',async e=>{
   const t=e.target;
+  const jb=t.closest('[data-join]');
+  if(jb){
+    let txt='';
+    if(jb.dataset.join==='clip'){try{txt=await navigator.clipboard.readText()}catch{}}
+    else txt=$('#joinMain')?.value||'';
+    const m=(txt||'').match(/[0-9a-f]{32}/);
+    if(!m){toast(jb.dataset.join==='clip'?'リンクがコピーされていません。下の欄に貼り付けて':'リンクを読み取れません');$('#joinMain')?.focus();return}
+    askJoin(m[0],true);return;
+  }
   const only=t.closest('[data-only]');
   if(only){const n=only.dataset.only;shopList().forEach(x=>x===n?folded.delete(x):folded.add(x));saveFold();render();haptic();return}
   if(t.closest('[data-unfoldall]')){folded.clear();saveFold();render();haptic();return}
