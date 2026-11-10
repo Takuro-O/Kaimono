@@ -443,6 +443,7 @@ function confirmSheet({title,msg,label,danger=true,onOk}){
 const SK='kaimono2_sync';
 let SY=(()=>{try{return JSON.parse(localStorage.getItem(SK))||{}}catch{return{}}})();
 SY.relay=SY.relay||'https://ntfy.sh';
+SY.dev=SY.dev||Math.random().toString(36).slice(2,10);
 const saveSY=()=>{try{localStorage.setItem(SK,JSON.stringify(SY))}catch{}};
 const enc=new TextEncoder(),dec=new TextDecoder();
 const b64=u=>{let s='';for(let k=0;k<u.length;k+=8192)s+=String.fromCharCode.apply(null,u.subarray(k,k+8192));return btoa(s)};
@@ -451,6 +452,7 @@ const hex=u=>[...u].map(x=>x.toString(16).padStart(2,'0')).join('');
 const sha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(s)));
 
 let es=null,aesKey=null,topic='',seen={},dirty=new Set(),pushT=null,replayT=null,retryT=null,retry=0,syncStatus='off',pushing=false;
+let diag={recv:0,err:''},helloSeen=new Set(),lastRespond=0,hiddenAt=0;
 
 function setStatus(s){syncStatus=s;const d=$('#syncDot');if(d)d.className='dot '+(s==='on'?'on':s==='connecting'?'connecting':'')}
 const hasSync=()=>!!(SY.room&&aesKey);
@@ -497,6 +499,14 @@ function pushDiff(){
   S.items.forEach(i=>{if(i.t>(seen[i.id]||0))dirty.add(i.id)});
   flush();
 }
+async function post(obj){
+  try{
+    const body=await sealMsg({from:SY.dev,...obj});
+    const res=await fetch(`${SY.relay}/${topic}`,{method:'POST',body});
+    if(res.ok){diag.err='';return true}
+    diag.err='HTTP '+res.status;return false;
+  }catch{diag.err='つながりません';return false}
+}
 async function flush(){
   if(pushing||!hasSync()||syncStatus!=='on'||!dirty.size) return;
   pushing=true;let failed=false;
@@ -510,22 +520,27 @@ async function flush(){
     }
     if(cur.length) chunks.push(cur);
     for(let k=0;k<chunks.length;k++){
-      let ok=false;
-      try{
-        const body=await sealMsg({items:chunks[k]});
-        const res=await fetch(`${SY.relay}/${topic}`,{method:'POST',body});
-        ok=res.ok;
-      }catch{}
-      if(!ok){
+      if(!await post({items:chunks[k]})){
         for(let j=k;j<chunks.length;j++) chunks[j].forEach(x=>dirty.add(x.id));
         throw new Error('push');
       }
     }
     retry=0;
   }catch{
-    failed=true;retry++;clearTimeout(pushT);pushT=setTimeout(flush,Math.min(30000,3000*2**Math.min(retry,4)));
+    failed=true;retry++;clearTimeout(pushT);pushT=setTimeout(flush,Math.min(20000,1500*2**Math.min(retry-1,4)));
   }finally{pushing=false}
   if(!failed&&dirty.size){clearTimeout(pushT);pushT=setTimeout(flush,300)}
+}
+/* 全部送り直す。ntfy.sh は履歴を約12時間しか持たないので、後から参加した端末には
+   「こんにちは(hello)」を送ってもらい、受け取った側が持っている全商品を送り直す */
+function pushAll(){
+  const lim=Date.now()-7*864e5;
+  S.items.filter(i=>!i.del||i.t>lim).forEach(i=>dirty.add(i.id));
+  flush();
+}
+async function sendHello(){ if(hasSync()&&syncStatus==='on') await post({hello:1,ts:Date.now()}) }
+function maybeHello(){
+  if(SY.needHello||Date.now()-(+SY.hello||0)>6*36e5){SY.hello=Date.now();SY.needHello=false;saveSY();sendHello()}
 }
 
 function connect(){
@@ -536,14 +551,20 @@ function connect(){
   es=new EventSource(`${SY.relay}/${topic}/sse?since=all`);
   es.onopen=()=>{
     retry=0;setStatus('on');
-    clearTimeout(replayT);replayT=setTimeout(pushDiff,1800); // 履歴の再生が終わってから、相手が持っていない分だけ送る
+    clearTimeout(replayT);replayT=setTimeout(()=>{pushDiff();maybeHello()},1800); // 履歴の再生が終わってから、相手が持っていない分だけ送る
   };
   es.onmessage=async e=>{
     try{
       const m=JSON.parse(e.data);
       if(m.event&&m.event!=='message') return;
       const p=await openMsg(m.message);
+      diag.recv=Date.now();
       if(Array.isArray(p.items)) mergeRemote(p.items);
+      if(p.hello&&p.from&&p.from!==SY.dev){
+        const hid=m.id||String(p.ts); if(helloSeen.has(hid)) return; helloSeen.add(hid);
+        /* 履歴に残っている古い hello には反応しない（新しいものだけ） */
+        if(Math.abs(Date.now()-(+p.ts||0))<90000&&Date.now()-lastRespond>8000){lastRespond=Date.now();setTimeout(pushAll,200+Math.random()*1300)}
+      }
     }catch{}
   };
   es.onerror=()=>{
@@ -564,7 +585,10 @@ function syncStop(){
   SY.room='';aesKey=null;topic='';saveSY();setStatus('off');
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&hasSync()&&(!es||es.readyState!==1)) connect();
+  if(document.visibilityState==='hidden'){hiddenAt=Date.now();return}
+  /* スマホは裏に回ると通信が止まるのに、画面側は「接続中」のままになることがある。少し離れていたら必ずつなぎ直す */
+  const away=hiddenAt&&Date.now()-hiddenAt>3000; hiddenAt=0;
+  if(hasSync()&&(!es||es.readyState!==1||away)) connect();
 });
 window.addEventListener('online',()=>{if(hasSync()) connect()});
 
@@ -580,15 +604,23 @@ async function copy(t){
     const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
   }
 }
+function diagText(){
+  const hm=t=>{const d=new Date(t);return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')};
+  const a=[diag.recv?`最後に受信 ${hm(diag.recv)}`:'まだ受信していません'];
+  if(diag.err) a.push(`送信できません（${diag.err}）`);
+  return a.join('　');
+}
 function openShare(){
   const on=!!SY.room;
   const st={on:'共有中',connecting:'接続中…',off:'共有していません'}[on?syncStatus:'off'];
   $('#sheetShare').innerHTML=`<div class="grab"></div>
     <h2>共有</h2>
     ${on?`<div class="stat"><span class="dot ${syncStatus==='on'?'on':syncStatus==='connecting'?'connecting':''}"></span>${st}</div>
+      <p class="note" style="margin:-6px 0 12px">${diagText()}</p>
       <p class="desc">招待リンクを開いた人と、リストがいつも同じになります。</p>
       <button class="btn p tappable" data-s="invite">📤 招待リンクを送る</button>
       <button class="btn s tappable" data-s="copylink">🔗 リンクをコピー</button>
+      <button class="btn s tappable" data-s="resync">🔄 今すぐ更新</button>
       <button class="btn s tappable" data-s="text">📋 テキストでコピー</button>
       <button class="btn g tappable" data-s="leave" style="color:var(--c-danger)">共有をやめる</button>`
     :`<p class="desc">招待リンクを開いた人と、リストがいつも同じになります。登録は不要です。</p>
@@ -614,6 +646,8 @@ function openShare(){
       const m=($('#joinInput').value||'').match(/[0-9a-f]{32}/);
       if(!m){toast('リンクを読み取れません');return}
       closeAll();askJoin(m[0]);
+    }else if(a==='resync'){
+      SY.needHello=true;saveSY();connect();closeAll();toast('更新中…');
     }else if(a==='copylink'){
       copy(inviteUrl()).then(()=>toast('リンクをコピーした'));
     }else if(a==='invite'){
@@ -633,7 +667,7 @@ function askJoin(code){
   confirmSheet({title:'共有に参加しますか？',
     msg:(SY.room?'今の共有から切り替わります。':'')+'この端末のリストも相手と共有されます。',
     label:'参加する',danger:false,onOk:async()=>{
-      SY.room=code;saveSY();seen={};
+      SY.room=code;SY.needHello=true;saveSY();seen={};
       S.items.forEach(i=>dirty.add(i.id));
       await syncStart();toast('参加した');
     }});
